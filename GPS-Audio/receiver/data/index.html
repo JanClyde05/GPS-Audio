@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>GuardianTrack WiFi Setup</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="shield-icon">&#x1f6e1;</div>
+      </div>
+      <h1>GuardianTrack Setup</h1>
+      <p class="subtitle">Connect receiver to WiFi</p>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="scan" id="tab-scan">Scan Networks</button>
+      <button class="tab" data-tab="manual" id="tab-manual">Manual Entry</button>
+    </nav>
+
+    <!-- Scan Tab -->
+    <section class="tab-content active" id="panel-scan">
+      <div class="network-list" id="network-list">
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>Scanning nearby networks...</p>
+        </div>
+      </div>
+      <button class="btn btn-secondary" id="btn-rescan" onclick="scanNetworks()">
+        &#x21bb; Rescan
+      </button>
+    </section>
+
+    <!-- Manual Entry Tab -->
+    <section class="tab-content" id="panel-manual">
+      <div class="form-group">
+        <label for="manual-ssid">Network Name (SSID)</label>
+        <input type="text" id="manual-ssid" placeholder="Enter network name" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label for="manual-pass">Password</label>
+        <div class="password-field">
+          <input type="password" id="manual-pass" placeholder="Enter password" autocomplete="off">
+          <button class="btn-toggle-pass" onclick="togglePassword('manual-pass')" aria-label="Toggle password visibility">&#x1f441;</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-manual-connect" onclick="connectManual()">Connect</button>
+    </section>
+
+    <!-- Password Modal -->
+    <div class="modal" id="password-modal">
+      <div class="modal-backdrop" onclick="closeModal()"></div>
+      <div class="modal-content">
+        <h2>Enter Password</h2>
+        <p>Network: <strong id="modal-ssid-display"></strong></p>
+        <div class="form-group">
+          <div class="password-field">
+            <input type="password" id="modal-pass" placeholder="Password" autocomplete="off">
+            <button class="btn-toggle-pass" onclick="togglePassword('modal-pass')" aria-label="Toggle password visibility">&#x1f441;</button>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button class="btn btn-primary" onclick="connectFromModal()">Connect</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar" style="display:none;">
+      <div class="spinner small"></div>
+      <span id="status-text">Connecting...</span>
+    </div>
+
+    <!-- Success Message -->
+    <div class="success-message" id="success-message" style="display:none;">
+      <div class="success-icon">&#x2705;</div>
+      <h2>Connected!</h2>
+      <p id="success-ip"></p>
+      <p class="success-note">GuardianTrack receiver is now online!</p>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

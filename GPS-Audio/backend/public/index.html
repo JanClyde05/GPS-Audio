@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GuardianTrack — Parent Dashboard</title>
+  <meta name="description" content="GuardianTrack parent dashboard — listen to audio alerts and view GPS location of your child's wearable device.">
+
+  <!-- Leaflet CSS for maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header id="app-header">
+    <div class="header-content">
+      <div class="brand">
+        <span class="brand-icon">🛡️</span>
+        <h1>GuardianTrack</h1>
+      </div>
+      <div class="header-status">
+        <span class="status-dot" id="status-dot"></span>
+        <span class="status-text" id="status-text">Loading...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="app-main">
+    <!-- Map Section -->
+    <section class="map-section" id="map-section">
+      <div class="section-header">
+        <h2>📍 Last Known Location</h2>
+        <button class="btn-icon" id="btn-refresh" onclick="loadEvents()" title="Refresh">
+          &#x21bb;
+        </button>
+      </div>
+      <div id="map" class="map-container"></div>
+    </section>
+
+    <!-- Events Section -->
+    <section class="events-section" id="events-section">
+      <div class="section-header">
+        <h2>🎙 Audio Alerts</h2>
+        <span class="event-count" id="event-count">0 events</span>
+      </div>
+      <div id="events-list" class="events-list">
+        <div class="empty-state">
+          <div class="empty-icon">📡</div>
+          <p>No alerts yet</p>
+          <p class="empty-sub">Audio alerts from the wearable will appear here</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Audio Player Modal -->
+  <div class="modal" id="player-modal">
+    <div class="modal-backdrop" onclick="closePlayer()"></div>
+    <div class="modal-content player-modal-content">
+      <button class="modal-close" onclick="closePlayer()">&times;</button>
+      <div class="player-header">
+        <span class="player-icon">🔊</span>
+        <h2>Audio Alert</h2>
+      </div>
+      <div class="player-meta" id="player-meta"></div>
+      <audio id="audio-player" controls class="audio-player"></audio>
+      <div class="player-map-mini" id="player-map-mini"></div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script src="/app.js"></script>
+</body>
+</html>
