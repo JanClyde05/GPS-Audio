@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initMap();
   loadEvents();
 
-  // Auto-refresh every 30 seconds
-  setInterval(loadEvents, 30000);
+  // Auto-refresh every 3 seconds for real-time live map tracking
+  setInterval(loadEvents, 3000);
 
   // Check for deep-linked event
   const hash = window.location.hash;
@@ -56,20 +56,20 @@ function updateMap(eventList) {
   eventList.forEach((evt, idx) => {
     if (!evt.lat || !evt.lon || (evt.lat === 0 && evt.lon === 0)) return;
 
-    const isLatest = idx === 0;
+    const isLive = evt.isTelemetry || idx === 0;
     const marker = L.circleMarker([evt.lat, evt.lon], {
-      radius: isLatest ? 10 : 6,
-      fillColor: isLatest ? '#22c55e' : '#ef4444',
-      color: isLatest ? '#16a34a' : '#dc2626',
-      weight: 2,
+      radius: isLive ? 12 : 7,
+      fillColor: isLive ? '#3b82f6' : '#ef4444',
+      color: isLive ? '#2563eb' : '#dc2626',
+      weight: isLive ? 3 : 2,
       opacity: 1,
-      fillOpacity: isLatest ? 0.9 : 0.6,
+      fillOpacity: isLive ? 0.9 : 0.6,
     }).addTo(map);
 
     const time = formatTime(evt.createdAt || evt.timestamp);
     marker.bindPopup(`
       <div style="font-family:Inter,sans-serif;font-size:13px;">
-        <strong>${isLatest ? '📍 Latest Alert' : '🔴 Alert'}</strong><br>
+        <strong>${isLive ? '📡 Live Wearable Location' : '🔴 Audio Alert Location'}</strong><br>
         ${time}<br>
         ${evt.lat.toFixed(6)}, ${evt.lon.toFixed(6)}
       </div>
@@ -81,7 +81,7 @@ function updateMap(eventList) {
 
   if (bounds.length > 0) {
     if (bounds.length === 1) {
-      map.setView(bounds[0], 15);
+      map.setView(bounds[0], 16);
     } else {
       map.fitBounds(bounds, { padding: [30, 30] });
     }
@@ -101,13 +101,14 @@ async function loadEvents() {
     events = data.events || [];
 
     statusDot.classList.add('online');
-    statusText.textContent = `${events.length} alert${events.length !== 1 ? 's' : ''}`;
+    const audioEvents = events.filter(e => !e.isTelemetry);
+    statusText.textContent = `${audioEvents.length} alert${audioEvents.length !== 1 ? 's' : ''}`;
 
     renderEvents(events);
     updateMap(events);
 
     document.getElementById('event-count').textContent =
-      `${events.length} event${events.length !== 1 ? 's' : ''}`;
+      `${audioEvents.length} alert${audioEvents.length !== 1 ? 's' : ''}`;
 
   } catch (err) {
     console.error('Failed to load events:', err);
@@ -119,7 +120,10 @@ async function loadEvents() {
 function renderEvents(eventList) {
   const container = document.getElementById('events-list');
 
-  if (eventList.length === 0) {
+  // Filter out pure telemetry events from the audio list
+  const audioList = eventList.filter(e => !e.isTelemetry);
+
+  if (audioList.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">📡</div>
@@ -130,7 +134,7 @@ function renderEvents(eventList) {
     return;
   }
 
-  container.innerHTML = eventList.map(evt => {
+  container.innerHTML = audioList.map(evt => {
     const time = formatTime(evt.createdAt || evt.timestamp);
     const duration = evt.audioSize
       ? `~${Math.round(evt.audioSize / (8000 * 2))}s`
@@ -271,4 +275,31 @@ function formatBytes(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+async function sendTestTelemetry() {
+  const btn = document.getElementById('btn-test-gps');
+  if (btn) btn.innerText = '⏳ Sending...';
+
+  try {
+    const formData = new FormData();
+    formData.append('lat', '17.649862');
+    formData.append('lon', '121.744133');
+    formData.append('type', 'telemetry');
+    formData.append('batt', '85');
+
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const data = await res.json();
+    console.log('Test telemetry uploaded:', data);
+
+    await loadEvents();
+  } catch (err) {
+    console.error('Failed to send test telemetry:', err);
+  } finally {
+    if (btn) btn.innerText = '🧪 Test Location';
+  }
 }

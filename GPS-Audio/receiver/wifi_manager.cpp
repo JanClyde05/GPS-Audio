@@ -187,8 +187,12 @@ static bool _tryConnect(const String& ssid, const String& pass, unsigned long ti
 // ── AP Mode ─────────────────────────────────────────────────────────────────
 
 static void _startAP() {
+  WiFi.disconnect(true);
+  delay(100);
   WiFi.mode(WIFI_AP);
+  delay(100);
   WiFi.softAP(WIFI_AP_SSID);
+  delay(100);
 
   IPAddress apIP = WiFi.softAPIP();
   Serial.print(F("[WIFI] AP started: "));
@@ -221,8 +225,36 @@ static void _stopAP() {
 // ── Web Server Routes ───────────────────────────────────────────────────────
 
 static void _setupRoutes() {
+  // Inline HTML fallback if index.html is missing on LittleFS
+  _server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (LittleFS.exists("/index.html")) {
+      request->send(LittleFS, "/index.html", "text/html");
+    } else {
+      String html = F("<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                      "<title>GuardianTrack WiFi Setup</title>"
+                      "<style>body{font-family:sans-serif;padding:20px;background:#111;color:#eee}"
+                      "input,button{display:block;width:100%;margin:10px 0;padding:12px;font-size:16px;box-sizing:border-box}"
+                      "button{background:#007bff;color:#fff;border:none;border-radius:4px;cursor:pointer}</style></head><body>"
+                      "<h2>GuardianTrack Wi-Fi Setup</h2>"
+                      "<p>Select your network and enter your password:</p>"
+                      "<form action='/connect' method='POST' onsubmit='sendForm(event)'>"
+                      "<input type='text' id='ssid' placeholder='WiFi Network Name (SSID)' required>"
+                      "<input type='password' id='pass' placeholder='WiFi Password'>"
+                      "<button type='submit'>Connect</button></form>"
+                      "<p id='msg'></p>"
+                      "<script>"
+                      "function sendForm(e){e.preventDefault();"
+                      "var ssid=document.getElementById('ssid').value;"
+                      "var pass=document.getElementById('pass').value;"
+                      "fetch('/connect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid:ssid,pass:pass})})"
+                      ".then(r=>r.json()).then(d=>{document.getElementById('msg').innerText='Connecting to '+ssid+'... Please wait 15s.';});}"
+                      "</script></body></html>");
+      request->send(200, "text/html", html);
+    }
+  });
+
   // Serve static files from LittleFS (data/ folder)
-  _server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+  _server.serveStatic("/", LittleFS, "/");
 
   // Network scan endpoint
   _server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request) {

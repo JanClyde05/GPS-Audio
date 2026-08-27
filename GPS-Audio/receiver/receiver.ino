@@ -14,6 +14,8 @@
  */
 
 #include <Arduino.h>
+#include <WiFi.h>
+#include <esp_mac.h>
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
@@ -84,8 +86,14 @@ void setup() {
   Serial.begin(SERIAL_BAUD);
   delay(1000);
 
+  // Read hardware MAC address directly from eFuse
+  uint8_t mac[6];
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
+
   Serial.println(F("═══════════════════════════════════════════"));
   Serial.println(F("  GuardianTrack Receiver — Booting..."));
+  Serial.printf("  MAC Address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
   Serial.println(F("═══════════════════════════════════════════"));
 
   // NVS for WiFi credentials
@@ -105,9 +113,7 @@ void setup() {
     initEspNow();
   }
 
-  Serial.println(F("[MAIN] Boot complete."));
-  Serial.print(F("[MAIN] MAC Address: "));
-  Serial.println(WiFi.macAddress());
+  Serial.println(F("[MAIN] Boot complete. Waiting for wearable..."));
   Serial.println(F("═══════════════════════════════════════════"));
 }
 

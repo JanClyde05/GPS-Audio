@@ -17,12 +17,12 @@
 // │  TODO: Replace with your receiver's actual MAC address.                │
 // │  Flash the receiver first, read MAC from serial output, paste here.    │
 // └──────────────────────────────────────────────────────────────────────────┘
-#define RECEIVER_MAC  { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }  // <-- CHANGE THIS
+#define RECEIVER_MAC  { 0x24, 0xEC, 0x4A, 0x30, 0x3A, 0x7C }  // <-- CHANGE THIS
 
 // ── ESP-NOW Channel ─────────────────────────────────────────────────────────
 // Must match the WiFi channel your receiver's router uses.
 // The receiver prints this on boot. Common values: 1, 6, 11.
-#define ESPNOW_CHANNEL  1  // <-- CHANGE THIS to match your router's channel
+#define ESPNOW_CHANNEL  6  // <-- CHANGE THIS to match your router's channel
 
 // ── GPS (NEO-6M via UART0) ──────────────────────────────────────────────────
 // Board's labeled UART0 TX/RX pair (silkscreen).

@@ -38,9 +38,14 @@
     <section class="map-section" id="map-section">
       <div class="section-header">
         <h2>📍 Last Known Location</h2>
-        <button class="btn-icon" id="btn-refresh" onclick="loadEvents()" title="Refresh">
-          &#x21bb;
-        </button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="btn-test-gps" onclick="sendTestTelemetry()" style="background:#2563eb;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;" title="Simulate Live GPS Telemetry">
+            🧪 Test Location
+          </button>
+          <button class="btn-icon" id="btn-refresh" onclick="loadEvents()" title="Refresh">
+            &#x21bb;
+          </button>
+        </div>
       </div>
       <div id="map" class="map-container"></div>
     </section>

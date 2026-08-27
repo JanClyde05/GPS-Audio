@@ -7,6 +7,10 @@
     "dev": "netlify dev",
     "deploy": "netlify deploy --prod"
   },
+  "dependencies": {
+    "@netlify/blobs": "^8.0.0",
+    "@netlify/functions": "^3.0.0"
+  },
   "devDependencies": {
     "netlify-cli": "^17.0.0"
   }

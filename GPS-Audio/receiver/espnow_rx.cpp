@@ -153,12 +153,27 @@ static void _onReceive(const uint8_t* macAddr,
 // ── Public API ──────────────────────────────────────────────────────────────
 
 bool espnowRxInit(uint8_t channel) {
-  // Allocate reassembly buffer in PSRAM
+  // Try PSRAM allocation first (35 sec = 560 KB)
   _audioCapacity = RX_AUDIO_BUFFER_SIZE;
   _audioBuffer = (uint8_t*)ps_malloc(_audioCapacity);
+
   if (!_audioBuffer) {
+    // Try internal RAM with full size
     _audioBuffer = (uint8_t*)malloc(_audioCapacity);
   }
+
+  if (!_audioBuffer) {
+    // Fall back to 15 seconds (~240 KB) in internal RAM
+    _audioCapacity = 8000 * 2 * 15;
+    _audioBuffer = (uint8_t*)malloc(_audioCapacity);
+  }
+
+  if (!_audioBuffer) {
+    // Fall back to 10 seconds (~160 KB) in internal RAM
+    _audioCapacity = 8000 * 2 * 10;
+    _audioBuffer = (uint8_t*)malloc(_audioCapacity);
+  }
+
   if (!_audioBuffer) {
     Serial.println(F("[ENOW] FATAL: Cannot allocate audio reassembly buffer!"));
     return false;

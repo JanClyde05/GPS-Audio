@@ -14,4 +14,7 @@ void httpUploadInit();
 // Returns true on success (HTTP 200).
 bool httpUpload(uint8_t* wavData, size_t wavSize, float lat, float lon);
 
+// Upload periodic GPS telemetry ping to the backend (live map tracking).
+bool httpSendTelemetry(float lat, float lon, uint8_t battPct);
+
 #endif // GUARDIANTRACK_HTTP_UPLOAD_H

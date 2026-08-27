@@ -21,9 +21,15 @@
 
 // ── Backend API ─────────────────────────────────────────────────────────────
 // ┌──────────────────────────────────────────────────────────────────────────┐
-// │  TODO: Replace with your actual Netlify site URL after deployment.     │
+// │  UNCOMMENT ONE OF THE OPTIONS BELOW BEFORE FLASHING:                     │
 // └──────────────────────────────────────────────────────────────────────────┘
-#define BACKEND_URL       "https://YOUR-SITE-NAME.netlify.app"  // <-- CHANGE THIS
+
+// --- OPTION A: Localhost Dev Server (Local Wi-Fi Testing) ---
+#define BACKEND_URL       "http://192.168.123.6:8888"
+
+// --- OPTION B: Production Netlify Cloud Server ---
+//#define BACKEND_URL     "https://gps-audio.netlify.app"
+
 #define UPLOAD_ENDPOINT   "/api/upload"
 
 // ── ntfy Notifications ──────────────────────────────────────────────────────

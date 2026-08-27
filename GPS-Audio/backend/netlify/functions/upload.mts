@@ -37,13 +37,43 @@ export default async (request: Request, context: Context) => {
     const formData = await request.formData();
 
     const audioFile = formData.get("audio") as File | null;
+    const type = formData.get("type") as string || "audio";
     const lat = formData.get("lat") as string || "0";
     const lon = formData.get("lon") as string || "0";
     const timestamp = formData.get("timestamp") as string || Date.now().toString();
 
-    if (!audioFile) {
-      return new Response(JSON.stringify({ error: "No audio file provided" }), {
-        status: 400,
+    const eventStore = getStore("events");
+
+    // ── Handle pure telemetry GPS pings (no audio file) ─────────────────
+    if (!audioFile || type === "telemetry") {
+      const eventId = `evt_telemetry_latest`;
+      const eventData = {
+        id: eventId,
+        audioKey: "",
+        lat: parseFloat(lat),
+        lon: parseFloat(lon),
+        timestamp: parseInt(timestamp) || Date.now(),
+        createdAt: new Date().toISOString(),
+        isTelemetry: true,
+      };
+
+      await eventStore.setJSON(eventId, eventData);
+
+      let eventIndex: string[] = [];
+      try {
+        const existing = await eventStore.get("_index", { type: "json" }) as string[] | null;
+        if (existing) eventIndex = existing;
+      } catch {}
+
+      if (!eventIndex.includes(eventId)) {
+        eventIndex.unshift(eventId);
+        await eventStore.setJSON("_index", eventIndex);
+      }
+
+      console.log(`[TELEMETRY] Live location updated: ${lat}, ${lon}`);
+
+      return new Response(JSON.stringify({ status: "ok", type: "telemetry", lat, lon }), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -53,7 +83,6 @@ export default async (request: Request, context: Context) => {
 
     // Get Netlify Blob stores
     const audioStore = getStore("audio-clips");
-    const eventStore = getStore("events");
 
     // Store audio WAV in Blob storage
     const audioKey = `${eventId}.wav`;

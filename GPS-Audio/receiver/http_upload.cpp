@@ -11,8 +11,10 @@
 #include "http_upload.h"
 #include "config.h"
 
-#include <HTTPClient.h>
+#include <WiFi.h>
+#include <WiFiClient.h>
 #include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
 static WiFiClientSecure _secureClient;
 
@@ -35,7 +37,10 @@ bool httpUpload(uint8_t* wavData, size_t wavSize, float lat, float lon) {
   HTTPClient http;
   http.setTimeout(HTTP_TIMEOUT_MS);
 
-  if (!http.begin(_secureClient, url)) {
+  WiFiClient plainClient;
+  bool begun = url.startsWith("https://") ? http.begin(_secureClient, url) : http.begin(plainClient, url);
+
+  if (!begun) {
     Serial.println(F("[HTTP] Connection failed!"));
     return false;
   }
@@ -112,6 +117,57 @@ bool httpUpload(uint8_t* wavData, size_t wavSize, float lat, float lon) {
     if (httpCode > 0) {
       Serial.printf("[HTTP] Response: %s\n", http.getString().c_str());
     }
+    http.end();
+    return false;
+  }
+}
+
+bool httpSendTelemetry(float lat, float lon, uint8_t battPct) {
+  if (lat == 0.0f && lon == 0.0f) return false;
+
+  String url = String(BACKEND_URL) + String(UPLOAD_ENDPOINT);
+  HTTPClient http;
+  http.setTimeout(5000);
+
+  WiFiClient plainClient;
+  bool begun = url.startsWith("https://") ? http.begin(_secureClient, url) : http.begin(plainClient, url);
+
+  if (!begun) {
+    Serial.println(F("[HTTP] Telemetry connection failed!"));
+    return false;
+  }
+
+  String boundary = "----GuardianTrackBoundary" + String(millis());
+  String contentType = "multipart/form-data; boundary=" + boundary;
+
+  String body = "";
+  body += "--" + boundary + "\r\n";
+  body += "Content-Disposition: form-data; name=\"lat\"\r\n\r\n";
+  body += String(lat, 6) + "\r\n";
+
+  body += "--" + boundary + "\r\n";
+  body += "Content-Disposition: form-data; name=\"lon\"\r\n\r\n";
+  body += String(lon, 6) + "\r\n";
+
+  body += "--" + boundary + "\r\n";
+  body += "Content-Disposition: form-data; name=\"batt\"\r\n\r\n";
+  body += String(battPct) + "\r\n";
+
+  body += "--" + boundary + "\r\n";
+  body += "Content-Disposition: form-data; name=\"type\"\r\n\r\n";
+  body += "telemetry\r\n";
+
+  body += "--" + boundary + "--\r\n";
+
+  http.addHeader("Content-Type", contentType);
+  int httpCode = http.POST(body);
+
+  if (httpCode == 200 || httpCode == 201) {
+    Serial.printf("[HTTP] Telemetry uploaded to Netlify! (lat=%.6f, lon=%.6f)\n", lat, lon);
+    http.end();
+    return true;
+  } else {
+    Serial.printf("[HTTP] Telemetry POST failed, code: %d\n", httpCode);
     http.end();
     return false;
   }

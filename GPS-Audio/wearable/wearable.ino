@@ -15,6 +15,7 @@
  */
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include <OneButton.h>
 #include <TinyGPS++.h>
 #include "config.h"
