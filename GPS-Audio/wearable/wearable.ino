@@ -1,6 +1,6 @@
 /*
- * GuardianTrack Wearable — Main
- * ==============================
+ * GuardianTrack Wearable — Main (Arduino IDE Sketch)
+ * ==================================================
  * ESP32-S3 SuperMini body-worn device.
  *
  * Trigger flow:
@@ -15,6 +15,8 @@
  */
 
 #include <Arduino.h>
+#include <OneButton.h>
+#include <TinyGPS++.h>
 #include "config.h"
 #include "protocol.h"
 #include "gps.h"

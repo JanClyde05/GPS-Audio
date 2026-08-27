@@ -22,10 +22,19 @@ static uint8_t _receiverMac[] = RECEIVER_MAC;
 
 // ── Send callback ───────────────────────────────────────────────────────────
 
-static void _onSendCb(const uint8_t* mac, esp_now_send_status_t status) {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+static void _onSendCb(const wifi_tx_info_t* info, esp_now_send_status_t status) {
+  (void)info;
   _sendOk   = (status == ESP_NOW_SEND_SUCCESS);
   _sendDone = true;
 }
+#else
+static void _onSendCb(const uint8_t* mac, esp_now_send_status_t status) {
+  (void)mac;
+  _sendOk   = (status == ESP_NOW_SEND_SUCCESS);
+  _sendDone = true;
+}
+#endif
 
 // Wait for send callback with timeout
 static bool _waitSend(uint32_t timeoutMs = 500) {

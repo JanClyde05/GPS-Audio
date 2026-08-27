@@ -1,6 +1,6 @@
 /*
- * GuardianTrack Receiver — Main
- * ==============================
+ * GuardianTrack Receiver — Main (Arduino IDE Sketch)
+ * ==================================================
  * ESP32-S3 SuperMini fixed base station.
  *
  * Boot sequence:
@@ -14,6 +14,10 @@
  */
 
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include <ESPAsyncWebServer.h>
+#include <AsyncTCP.h>
+#include <LittleFS.h>
 #include "config.h"
 #include "protocol.h"
 #include "nvs_store.h"

@@ -65,8 +65,15 @@ static TelemetryCallback  _telemetryCb   = nullptr;
 
 // ── ESP-NOW Receive Callback (ISR context — keep fast!) ─────────────────────
 
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
 static void _onReceive(const esp_now_recv_info_t* recvInfo,
                        const uint8_t* data, int len) {
+  (void)recvInfo;
+#else
+static void _onReceive(const uint8_t* macAddr,
+                       const uint8_t* data, int len) {
+  (void)macAddr;
+#endif
   if (len < (int)sizeof(PacketHeader)) return;
 
   const PacketHeader* hdr = (const PacketHeader*)data;
