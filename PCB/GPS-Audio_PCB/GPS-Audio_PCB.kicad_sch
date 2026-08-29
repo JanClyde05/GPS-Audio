@@ -264,6 +264,150 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Audio Module:Voice_Sensor_Module"
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "U"
+				(at 13.716 -8.128 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "Voice_Sensor_Module_0_1"
+				(rectangle
+					(start 0 0)
+					(end 27.94 -16.51)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type background)
+					)
+				)
+			)
+			(symbol "Voice_Sensor_Module_1_1"
+				(text "Audio Module"
+					(at 13.97 1.524 0)
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at -2.54 -2.54 0)
+					(length 2.54)
+					(name "D0"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -2.54 -6.35 0)
+					(length 2.54)
+					(name "VCC"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -2.54 -10.16 0)
+					(length 2.54)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at -2.54 -13.97 0)
+					(length 2.54)
+					(name "A0"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Device:C"
 			(pin_numbers
 				(hide yes)
@@ -2109,6 +2253,10 @@
 		(uuid "d0f75599-6e81-4e6b-b3f3-4717380577c6")
 	)
 	(no_connect
+		(at 29.21 113.03)
+		(uuid "d9e75014-3c77-4db0-8ab8-580154d1fd10")
+	)
+	(no_connect
 		(at 119.38 76.2)
 		(uuid "e0a1c891-b88e-4c92-8a01-85b853c74357")
 	)
@@ -2290,6 +2438,16 @@
 	)
 	(wire
 		(pts
+			(xy 22.86 116.84) (xy 29.21 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3db67c6c-e18c-45d1-862f-d20ac4282769")
+	)
+	(wire
+		(pts
 			(xy 27.94 45.72) (xy 31.75 45.72)
 		)
 		(stroke
@@ -2450,6 +2608,16 @@
 	)
 	(wire
 		(pts
+			(xy 22.86 120.65) (xy 29.21 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "afde49cd-069e-4e72-8100-f2205644408e")
+	)
+	(wire
+		(pts
 			(xy 118.11 40.64) (xy 119.38 40.64)
 		)
 		(stroke
@@ -2572,22 +2740,22 @@
 	)
 	(global_label "MIC"
 		(shape input)
-		(at 80.01 68.58 0)
+		(at 29.21 124.46 270)
 		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify left)
+			(justify right)
 		)
 		(uuid "5509905c-5857-48af-b5e1-c3e1fc151765")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 86.3214 68.58 0)
+			(at 29.21 130.7714 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(justify left)
+				(justify right)
 				(hide yes)
 			)
 		)
@@ -2677,6 +2845,82 @@
 				)
 				(justify right)
 				(hide yes)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Audio Module:Voice_Sensor_Module")
+		(at 31.75 110.49 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "07838385-f9cc-4936-b040-aa2433c25446")
+		(property "Reference" "U3"
+			(at 60.96 116.2021 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "~"
+			(at 60.96 118.7421 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Connector_JST:JST_EH_B4B-EH-A_1x04_P2.50mm_Vertical"
+			(at 31.75 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 31.75 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 31.75 110.49 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "56d7074e-f491-478c-a769-499926b9510f")
+		)
+		(pin "3"
+			(uuid "8ff2aed1-65dd-4062-a947-6b643f52e641")
+		)
+		(pin "4"
+			(uuid "b1f1f9b2-95bc-4c62-965a-2ff90b132aa9")
+		)
+		(pin "1"
+			(uuid "19aa6e2e-32c1-42bb-8b38-775738afca8e")
+		)
+		(instances
+			(project ""
+				(path "/956208b4-dd5f-4736-a8ce-c1cf893582fa"
+					(reference "U3")
+					(unit 1)
+				)
 			)
 		)
 	)
@@ -3165,6 +3409,72 @@
 			(project ""
 				(path "/956208b4-dd5f-4736-a8ce-c1cf893582fa"
 					(reference "U2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 22.86 120.65 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "445fdff4-47af-4010-8cde-a18abe7ea9f6")
+		(property "Reference" "#PWR013"
+			(at 22.86 127 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 22.86 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 22.86 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 22.86 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 22.86 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "23a1ffb1-558d-4b8f-a799-0a1d1b69b3ec")
+		)
+		(instances
+			(project ""
+				(path "/956208b4-dd5f-4736-a8ce-c1cf893582fa"
+					(reference "#PWR013")
 					(unit 1)
 				)
 			)
@@ -3854,6 +4164,72 @@
 			(project "GPS-Audio_PCB"
 				(path "/956208b4-dd5f-4736-a8ce-c1cf893582fa"
 					(reference "R3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+3V3")
+		(at 22.86 116.84 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "910c2383-ad3f-4924-a6fc-02d65595c067")
+		(property "Reference" "#PWR012"
+			(at 22.86 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+3V3"
+			(at 22.86 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 22.86 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 22.86 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
+			(at 22.86 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "07efe120-40f3-4021-8940-988164ba1891")
+		)
+		(instances
+			(project ""
+				(path "/956208b4-dd5f-4736-a8ce-c1cf893582fa"
+					(reference "#PWR012")
 					(unit 1)
 				)
 			)

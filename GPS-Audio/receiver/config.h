@@ -25,10 +25,10 @@
 // └──────────────────────────────────────────────────────────────────────────┘
 
 // --- OPTION A: Localhost Dev Server (Local Wi-Fi Testing) ---
-#define BACKEND_URL       "http://192.168.123.6:8888"
+//#define BACKEND_URL       "http://192.168.123.6:8888"
 
 // --- OPTION B: Production Netlify Cloud Server ---
-//#define BACKEND_URL     "https://gps-audio.netlify.app"
+#define BACKEND_URL     "https://gps-audio.netlify.app"
 
 #define UPLOAD_ENDPOINT   "/api/upload"
 
