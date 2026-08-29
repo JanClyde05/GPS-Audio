@@ -1,9 +1,10 @@
 [build]
+  base = "backend"
   command = "npm run build"
-  publish = "dist"
+  publish = "backend/dist"
 
 [functions]
-  directory = "netlify/functions"
+  directory = "backend/netlify/functions"
   node_bundler = "esbuild"
 
 [[redirects]]

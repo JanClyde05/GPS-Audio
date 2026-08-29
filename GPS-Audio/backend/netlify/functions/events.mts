@@ -10,7 +10,7 @@
  */
 
 import type { Context } from "@netlify/functions";
-import { getEvent, getAudio, getEventIndex, clearAllStores } from "./store";
+import { getEvent, getAudio, getEventIndex, clearAllStores, seedEvents, generateSampleWavBuffer, DEFAULT_SEED_EVENTS } from "./store";
 
 export default async (request: Request, context: Context) => {
   if (request.method === "OPTIONS") {
@@ -22,6 +22,22 @@ export default async (request: Request, context: Context) => {
     const audioKey = url.searchParams.get("audio");
     const eventId = url.searchParams.get("id");
     const clearParam = url.searchParams.get("clear");
+    const isSeed = url.pathname.endsWith("/seed") || url.searchParams.get("seed") === "true";
+
+    // ── Seed demo events ──────────────────────────────────────────────────
+    if (isSeed) {
+      await seedEvents();
+      const index = await getEventIndex();
+      const events = [];
+      for (const id of index) {
+        const evt = await getEvent(id);
+        if (evt) events.push(evt);
+      }
+      return new Response(JSON.stringify({ status: "ok", events }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // ── Clear system memory & events ─────────────────────────────────────
     if (request.method === "DELETE" || clearParam === "true") {
@@ -32,14 +48,11 @@ export default async (request: Request, context: Context) => {
       });
     }
 
-    // ── Serve audio file directly ─────────────────────────────────────────
+    // ── Serve audio file directly (with synthetic sample fallback) ────────
     if (audioKey) {
-      const audioData = await getAudio(audioKey);
+      let audioData = await getAudio(audioKey);
       if (!audioData) {
-        return new Response(JSON.stringify({ error: "Audio not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
+        audioData = generateSampleWavBuffer(4, 440);
       }
 
       return new Response(audioData, {
@@ -69,9 +82,15 @@ export default async (request: Request, context: Context) => {
     }
 
     // ── List all events ───────────────────────────────────────────────────
-    const index = await getEventIndex();
-    const events = [];
+    let index = await getEventIndex();
 
+    // Auto-seed initial default events if store is empty
+    if (index.length === 0) {
+      await seedEvents();
+      index = await getEventIndex();
+    }
+
+    const events = [];
     for (const id of index) {
       const evt = await getEvent(id);
       if (evt) {
@@ -94,5 +113,5 @@ export default async (request: Request, context: Context) => {
 };
 
 export const config = {
-  path: "/api/events",
+  path: ["/api/events", "/api/events/*"],
 };

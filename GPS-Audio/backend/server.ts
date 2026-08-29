@@ -198,6 +198,28 @@ async function startServer() {
 
       console.log(`[UPLOAD] ✅ Event recorded: ${eventId} (${type}), GPS: ${lat}, ${lon}`);
 
+      // Send ntfy push alert for Audio/SOS events
+      if (!isTelemetry) {
+        const host = req.headers.host || "localhost:8888";
+        const protocol = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+        const siteUrl = `${protocol}://${host}`;
+        const dashboardUrl = `${siteUrl}/#event-${eventId}`;
+        const durationSec = Math.max(1, Math.round(audioSize / (8000 * 2)));
+
+        fetch("https://ntfy.sh/gps-audio-notifications", {
+          method: "POST",
+          headers: {
+            "Title": "🚨 GuardianTrack Alert",
+            "Priority": "high",
+            "Tags": "rotating_light,microphone",
+            "Click": dashboardUrl,
+            "Actions": `view, Open Dashboard, ${dashboardUrl}`,
+          },
+          body: `Audio alert received!\n📍 Location: ${lat}, ${lon}\n⏱ Duration: ~${durationSec}s\n\nTap to listen and view location.`,
+        }).then(() => console.log(`[NTFY] Alert sent for ${eventId}`))
+          .catch((err) => console.error("[NTFY] Error sending alert:", err));
+      }
+
       res.status(200).json({
         status: "success",
         eventId,

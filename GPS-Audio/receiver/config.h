@@ -15,9 +15,9 @@
 
 // ── Wi-Fi (Captive Portal Provisioning) ─────────────────────────────────────
 // Credentials stored in NVS after first captive portal setup.
-#define WIFI_AP_SSID             "GuardianTrack_Setup"  // SoftAP name for provisioning
-#define WIFI_CONNECT_TIMEOUT_MS  15000                  // Per-attempt connection timeout
-#define WIFI_RETRY_INTERVAL_MS   30000                  // Reconnect retry interval
+#define WIFI_AP_SSID "GuardianTrack_Setup" // SoftAP name for provisioning
+#define WIFI_CONNECT_TIMEOUT_MS 15000      // Per-attempt connection timeout
+#define WIFI_RETRY_INTERVAL_MS 30000       // Reconnect retry interval
 
 // ── Backend API ─────────────────────────────────────────────────────────────
 // ┌──────────────────────────────────────────────────────────────────────────┐
@@ -25,12 +25,12 @@
 // └──────────────────────────────────────────────────────────────────────────┘
 
 // --- OPTION A: Localhost Dev Server (Local Wi-Fi Testing) ---
-//#define BACKEND_URL       "http://192.168.123.6:8888"
+// #define BACKEND_URL       "http://192.168.123.6:8888"
 
 // --- OPTION B: Production Netlify Cloud Server ---
-#define BACKEND_URL     "https://gps-audio.netlify.app"
+#define BACKEND_URL "https://gps-audio-tracker.netlify.app"
 
-#define UPLOAD_ENDPOINT   "/api/upload"
+#define UPLOAD_ENDPOINT "/api/upload"
 
 // ── ntfy Notifications ──────────────────────────────────────────────────────
 // ┌──────────────────────────────────────────────────────────────────────────┐
@@ -40,17 +40,18 @@
 // └──────────────────────────────────────────────────────────────────────────┘
 
 // ── Upload Retry ────────────────────────────────────────────────────────────
-#define UPLOAD_RETRY_INTERVAL_MS  60000   // Retry failed uploads every 60s
-#define UPLOAD_MAX_RETRIES        5       // Max retry attempts per payload
-#define HTTP_TIMEOUT_MS           15000   // HTTP request timeout
+#define UPLOAD_RETRY_INTERVAL_MS 60000 // Retry failed uploads every 60s
+#define UPLOAD_MAX_RETRIES 5           // Max retry attempts per payload
+#define HTTP_TIMEOUT_MS 15000          // HTTP request timeout
 
 // ── Audio Reassembly Buffer ─────────────────────────────────────────────────
-#define RX_AUDIO_BUFFER_SIZE  (8000 * 2 * 35)  // ~35 seconds max (margin over 30s)
+#define RX_AUDIO_BUFFER_SIZE                                                   \
+  (8000 * 2 * 35) // ~35 seconds max (margin over 30s)
 
 // ── NVS ─────────────────────────────────────────────────────────────────────
-#define NVS_NAMESPACE  "guardian"
+#define NVS_NAMESPACE "guardian"
 
 // ── System ──────────────────────────────────────────────────────────────────
-#define SERIAL_BAUD    115200
+#define SERIAL_BAUD 115200
 
 #endif // GUARDIANTRACK_RECEIVER_CONFIG_H

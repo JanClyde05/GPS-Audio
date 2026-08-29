@@ -1,9 +1,10 @@
 [build]
+  base = "GPS-Audio/backend"
   command = "npm run build"
-  publish = "dist"
+  publish = "GPS-Audio/backend/dist"
 
 [functions]
-  directory = "netlify/functions"
+  directory = "GPS-Audio/backend/netlify/functions"
   node_bundler = "esbuild"
 
 [[redirects]]
