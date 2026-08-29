@@ -60,6 +60,9 @@ static void onAudioReady(uint8_t* wavData, size_t wavSize, float lat, float lon)
 static void onTelemetry(float lat, float lon, uint8_t battPct) {
   Serial.printf("[MAIN] 📍 Wearable location: %.6f, %.6f (batt: %d%%)\n",
                 lat, lon, battPct);
+  if (wifiIsConnected()) {
+    httpSendTelemetry(lat, lon, battPct);
+  }
 }
 
 // ── ESP-NOW Init (called after WiFi connects) ──────────────────────────────

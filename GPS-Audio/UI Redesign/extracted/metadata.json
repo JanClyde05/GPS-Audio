@@ -1,0 +1,6 @@
+{
+  "name": "GuardianTrack Dashboard",
+  "description": "Minimalist, high-fidelity monitoring dashboard for wearable GPS telemetry and audio alerts.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

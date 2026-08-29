@@ -100,11 +100,41 @@ static void audioTask(void* param) {
       continue;
     }
 
+    uint32_t lastProgressMs = 0;
+
     // Record until stopped or buffer full
     while (isRecording && !bufferIsFull()) {
       size_t samplesRead = micReadChunk(chunk, chunkSamples);
       if (samplesRead > 0) {
         bufferWrite(chunk, samplesRead);
+
+        // Find peak amplitude in this chunk to monitor mic signal
+        int16_t peak = 0;
+        for (size_t i = 0; i < samplesRead; i++) {
+          int16_t absVal = abs(chunk[i]);
+          if (absVal > peak) peak = absVal;
+        }
+
+        // Print live recording status & visual VU meter every 500ms
+        if (millis() - lastProgressMs >= 500) {
+          lastProgressMs = millis();
+
+          int minR = 0, maxR = 0, avgR = 0;
+          float bias = 0;
+          micGetDiagnostics(minR, maxR, avgR, bias);
+
+          int bars = map(peak, 0, 16000, 0, 10);
+          if (bars > 10) bars = 10;
+          char vu[11];
+          for (int b = 0; b < 10; b++) vu[b] = (b < bars) ? '|' : '.';
+          vu[10] = '\0';
+
+          Serial.printf("[REC] %.1fs | ADC Raw [Min:%4d, Max:%4d, Avg:%4d, Bias:%4.0f] | Peak PCM: %5d [%s]\n",
+                        (float)bufferGetSize() / (AUDIO_SAMPLE_RATE * 2),
+                        minR, maxR, avgR, bias,
+                        peak,
+                        vu);
+        }
       }
     }
 

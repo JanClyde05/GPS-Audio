@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    letter-spacing: -0.01em;
+  }
+
+  code, pre, .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.025em;
+  }
+}
+
+/* Custom Leaflet Map Minimalist Monochrome Styling */
+.leaflet-container {
+  font-family: var(--font-sans) !important;
+  background-color: #f4f4f5 !important;
+}
+
+.dark .leaflet-container {
+  background-color: #09090b !important;
+}
+
+/* Light mode map tile tone: desaturated, clean, high clarity */
+.light-map-tiles .leaflet-tile-pane {
+  filter: grayscale(0.85) contrast(1.05) brightness(1.02);
+}
+
+/* Dark mode map tile tone: deep monochromatic slate/zinc */
+.dark-map-tiles .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(0.9) contrast(1.2) grayscale(0.85);
+}
+
+/* Leaflet Popup Minimalist Styling */
+.custom-leaflet-popup .leaflet-popup-content-wrapper {
+  background: #18181b !important;
+  color: #fafafa !important;
+  border-radius: 8px !important;
+  padding: 4px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.custom-leaflet-popup .leaflet-popup-tip {
+  background: #18181b !important;
+}
+
+.light .custom-leaflet-popup .leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  color: #09090b !important;
+  border: 1px solid #e4e4e7 !important;
+}
+
+.light .custom-leaflet-popup .leaflet-popup-tip {
+  background: #ffffff !important;
+}
+
+/* Custom pulsing radar ring for live coordinates */
+@keyframes live-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  70% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+.pulse-ring {
+  animation: live-pulse 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+/* Smooth micro-scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #27272a;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}

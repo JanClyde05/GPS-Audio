@@ -13,20 +13,29 @@ static size_t   _capacity = 0;
 static size_t   _used     = 0;
 
 bool bufferInit() {
-  _capacity = AUDIO_BUFFER_SIZE;
+  _capacity = AUDIO_BUFFER_SIZE;  // 480,000 bytes (30 seconds)
 
-  // Try PSRAM first (ESP32-S3 typically has 2–8 MB)
+  // Try PSRAM first (ESP32-S3 SuperMini with PSRAM)
   _buffer = (uint8_t*)ps_malloc(_capacity);
   if (_buffer) {
-    Serial.printf("[ABUF] Allocated %u bytes in PSRAM\n", _capacity);
+    Serial.printf("[ABUF] Successfully allocated %u bytes (30s) in PSRAM\n", _capacity);
   } else {
-    // Fallback to regular heap (will likely fail for large buffers)
+    // Fallback to internal heap with safe 10-second buffer (160,000 bytes = 10.0s recording)
+    _capacity = 160000;
     _buffer = (uint8_t*)malloc(_capacity);
     if (_buffer) {
-      Serial.printf("[ABUF] Allocated %u bytes in heap (no PSRAM)\n", _capacity);
+      Serial.printf("[ABUF] WARNING: PSRAM not active! Allocated %u bytes (~10.0s) in internal heap.\n", _capacity);
+      Serial.println(F("[ABUF] NOTICE: Enable PSRAM in Arduino IDE (Tools > PSRAM > OPI PSRAM) for full 30s recording."));
     } else {
-      Serial.println(F("[ABUF] FATAL: Failed to allocate audio buffer!"));
-      return false;
+      // Fallback to 8-second buffer (128,000 bytes) if 160KB fails
+      _capacity = 128000;
+      _buffer = (uint8_t*)malloc(_capacity);
+      if (_buffer) {
+        Serial.printf("[ABUF] Allocated %u bytes (~8.0s) in internal heap.\n", _capacity);
+      } else {
+        Serial.println(F("[ABUF] FATAL: Failed to allocate audio buffer memory!"));
+        return false;
+      }
     }
   }
 

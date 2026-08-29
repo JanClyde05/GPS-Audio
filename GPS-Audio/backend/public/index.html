@@ -39,6 +39,12 @@
       <div class="section-header">
         <h2>📍 Last Known Location</h2>
         <div style="display:flex;gap:8px;align-items:center;">
+          <button id="btn-purge-esp32" onclick="purgeEsp32Queue()" style="background:#ea580c;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;" title="Purge ESP32 Ongoing Queue & Memory">
+            ⚡ Purge ESP32 Queue
+          </button>
+          <button id="btn-clear-logs" onclick="clearDashboardLogs()" style="background:#dc2626;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;" title="Clear Dashboard Event Cards">
+            🗑️ Clear Logs
+          </button>
           <button id="btn-test-gps" onclick="sendTestTelemetry()" style="background:#2563eb;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;" title="Simulate Live GPS Telemetry">
             🧪 Test Location
           </button>

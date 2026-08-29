@@ -14,6 +14,10 @@ static ButtonCallback _onLongPress   = nullptr;
 
 // ── Callbacks ───────────────────────────────────────────────────────────────
 
+static void _handleClick() {
+  Serial.println(F("[BTN] Single-click detected on GPIO5! (Button circuit working OK)"));
+}
+
 static void _handleMultiClick() {
   int clicks = btn.getNumberClicks();
   if (clicks == 3 && _onTripleClick) {
@@ -29,24 +33,38 @@ static void _handleLongPressStart() {
   }
 }
 
-// ── Public API ──────────────────────────────────────────────────────────────
-
 void buttonInit(ButtonCallback onTripleClick, ButtonCallback onLongPress) {
   _onTripleClick = onTripleClick;
   _onLongPress   = onLongPress;
 
+  // Set GPIO5 mode explicitly
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  btn.attachClick(_handleClick);
   btn.attachMultiClick(_handleMultiClick);
   btn.attachLongPressStart(_handleLongPressStart);
 
-  // Tuning: require 3 clicks within 600ms, long-press after 800ms
-  btn.setClickTicks(200);
-  btn.setPressTicks(800);
+  // Relax click timing for human-friendly triple-clicking (400ms between clicks)
+  btn.setClickTicks(400);
+  btn.setPressTicks(700);
 
-  Serial.println(F("[BTN] Initialized on GPIO" ));
-  Serial.print(F("      Triple-click = record, Long-press = stop+send"));
-  Serial.println();
+  Serial.printf("[BTN] Initialized on GPIO%d (INPUT_PULLUP, Active LOW)\n", BUTTON_PIN);
+  Serial.println(F("      Raw GPIO state debugger enabled on serial."));
+  Serial.println(F("      Triple-click = record, Long-press = stop+send"));
 }
 
+static int _lastRawState = -1;
+
 void buttonUpdate() {
+  int currentRawState = digitalRead(BUTTON_PIN);
+  if (currentRawState != _lastRawState) {
+    _lastRawState = currentRawState;
+    if (_lastRawState == LOW) {
+      Serial.println(F("[RAW GPIO5] 🔽 Button Pressed -> Shorted to GND (LOW)"));
+    } else {
+      Serial.println(F("[RAW GPIO5] 🔼 Button Released -> Open (HIGH)"));
+    }
+  }
+
   btn.tick();
 }

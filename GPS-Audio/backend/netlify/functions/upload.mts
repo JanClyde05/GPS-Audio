@@ -2,25 +2,18 @@
  * GuardianTrack Backend — Upload Function
  * =========================================
  * Receives audio WAV + GPS metadata from the receiver (ESP32).
- * Stores audio in Netlify Blobs, logs the event, fires ntfy notification.
+ * Supports multipart/form-data, JSON, and raw stream payloads.
+ * Stores audio in Netlify Blobs (or local memory store), logs event, fires ntfy notification.
  *
  * Endpoint: POST /api/upload
- * Content-Type: multipart/form-data
- *   Fields: audio (WAV file), lat, lon, timestamp
  */
 
-import { getStore } from "@netlify/blobs";
 import type { Context } from "@netlify/functions";
+import { saveEvent, saveAudio, updateEventIndex } from "./store";
 
-// ┌──────────────────────────────────────────────────────────────────────────┐
-// │  ntfy topic: gps-audio-notifications                                   │
-// │  URL: https://ntfy.sh/gps-audio-notifications                          │
-// │  TODO: Move topic to environment variable for production.              │
-// └──────────────────────────────────────────────────────────────────────────┘
 const NTFY_TOPIC_URL = "https://ntfy.sh/gps-audio-notifications";
 
 export default async (request: Request, context: Context) => {
-  // Handle CORS preflight
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204 });
   }
@@ -33,19 +26,41 @@ export default async (request: Request, context: Context) => {
   }
 
   try {
-    // Parse multipart form data
-    const formData = await request.formData();
+    const url = new URL(request.url);
+    let lat = url.searchParams.get("lat") || request.headers.get("x-lat") || "0";
+    let lon = url.searchParams.get("lon") || request.headers.get("x-lon") || "0";
+    let timestamp = url.searchParams.get("timestamp") || request.headers.get("x-timestamp") || Date.now().toString();
+    let type = url.searchParams.get("type") || request.headers.get("x-type") || "audio";
+    let audioBuffer: ArrayBuffer | null = null;
 
-    const audioFile = formData.get("audio") as File | null;
-    const type = formData.get("type") as string || "audio";
-    const lat = formData.get("lat") as string || "0";
-    const lon = formData.get("lon") as string || "0";
-    const timestamp = formData.get("timestamp") as string || Date.now().toString();
+    const contentType = (request.headers.get("content-type") || "").toLowerCase();
 
-    const eventStore = getStore("events");
+    if (contentType.includes("multipart/form-data")) {
+      try {
+        const formData = await request.formData();
+        const audioFile = formData.get("audio") as File | null;
+        if (audioFile && typeof audioFile.arrayBuffer === "function") {
+          audioBuffer = await audioFile.arrayBuffer();
+        }
+        if (formData.has("lat")) lat = (formData.get("lat") as string) || lat;
+        if (formData.has("lon")) lon = (formData.get("lon") as string) || lon;
+        if (formData.has("timestamp")) timestamp = (formData.get("timestamp") as string) || timestamp;
+        if (formData.has("type")) type = (formData.get("type") as string) || type;
+      } catch (formErr) {
+        console.warn("[UPLOAD] formData() parse issue — attempting direct body extraction:", formErr);
+      }
+    }
+
+    // Direct stream fallback if formData didn't extract audio
+    if (!audioBuffer) {
+      const rawBytes = await request.arrayBuffer();
+      if (rawBytes && rawBytes.byteLength > 0) {
+        audioBuffer = rawBytes;
+      }
+    }
 
     // ── Handle pure telemetry GPS pings (no audio file) ─────────────────
-    if (!audioFile || type === "telemetry") {
+    if (!audioBuffer || audioBuffer.byteLength === 0 || type === "telemetry") {
       const eventId = `evt_telemetry_latest`;
       const eventData = {
         id: eventId,
@@ -57,18 +72,8 @@ export default async (request: Request, context: Context) => {
         isTelemetry: true,
       };
 
-      await eventStore.setJSON(eventId, eventData);
-
-      let eventIndex: string[] = [];
-      try {
-        const existing = await eventStore.get("_index", { type: "json" }) as string[] | null;
-        if (existing) eventIndex = existing;
-      } catch {}
-
-      if (!eventIndex.includes(eventId)) {
-        eventIndex.unshift(eventId);
-        await eventStore.setJSON("_index", eventIndex);
-      }
+      await saveEvent(eventId, eventData);
+      await updateEventIndex(eventId);
 
       console.log(`[TELEMETRY] Live location updated: ${lat}, ${lon}`);
 
@@ -78,22 +83,17 @@ export default async (request: Request, context: Context) => {
       });
     }
 
-    // Generate unique key for this event
+    // Generate unique key for this audio event
     const eventId = `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-    // Get Netlify Blob stores
-    const audioStore = getStore("audio-clips");
-
-    // Store audio WAV in Blob storage
     const audioKey = `${eventId}.wav`;
-    const audioBuffer = await audioFile.arrayBuffer();
-    await audioStore.set(audioKey, new Uint8Array(audioBuffer), {
-      metadata: {
-        contentType: "audio/wav",
-        lat,
-        lon,
-        timestamp,
-      },
+    const audioData = new Uint8Array(audioBuffer);
+
+    // Store audio WAV data
+    await saveAudio(audioKey, audioData, {
+      contentType: "audio/wav",
+      lat,
+      lon,
+      timestamp,
     });
 
     // Store event metadata
@@ -104,32 +104,18 @@ export default async (request: Request, context: Context) => {
       lon: parseFloat(lon),
       timestamp: parseInt(timestamp) || Date.now(),
       createdAt: new Date().toISOString(),
-      audioSize: audioBuffer.byteLength,
+      audioSize: audioData.byteLength,
     };
 
-    await eventStore.setJSON(eventId, eventData);
+    await saveEvent(eventId, eventData);
+    await updateEventIndex(eventId);
 
-    // Also append to an event index (list of event IDs)
-    let eventIndex: string[] = [];
-    try {
-      const existing = await eventStore.get("_index", { type: "json" }) as string[] | null;
-      if (existing) eventIndex = existing;
-    } catch {
-      // No index yet — start fresh
-    }
-    eventIndex.unshift(eventId);  // Newest first
-    if (eventIndex.length > 100) eventIndex = eventIndex.slice(0, 100);  // Cap at 100
-    await eventStore.setJSON("_index", eventIndex);
-
-    console.log(`[UPLOAD] Event ${eventId}: ${audioBuffer.byteLength} bytes, GPS: ${lat}, ${lon}`);
+    console.log(`[UPLOAD] ✅ Audio Event ${eventId}: ${audioData.byteLength} bytes, GPS: ${lat}, ${lon}`);
 
     // ── Fire ntfy notification ────────────────────────────────────────────
-
-    // Build the dashboard URL for this event
-    const siteUrl = process.env.URL || "https://YOUR-SITE-NAME.netlify.app";
+    const siteUrl = process.env.URL || "http://localhost:8888";
     const dashboardUrl = `${siteUrl}/#event-${eventId}`;
-
-    const durationSec = Math.round(audioBuffer.byteLength / (8000 * 2));
+    const durationSec = Math.round(audioData.byteLength / (8000 * 2));
 
     try {
       await fetch(NTFY_TOPIC_URL, {
@@ -146,22 +132,19 @@ export default async (request: Request, context: Context) => {
       console.log(`[NTFY] Notification sent for event ${eventId}`);
     } catch (ntfyErr) {
       console.error(`[NTFY] Failed to send notification:`, ntfyErr);
-      // Don't fail the upload just because ntfy is down
     }
-
-    // ── Return success ──────────────────────────────────────────────────
 
     return new Response(JSON.stringify({
       status: "ok",
       eventId,
-      audioSize: audioBuffer.byteLength,
+      audioSize: audioData.byteLength,
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
 
   } catch (err) {
-    console.error("[UPLOAD] Error:", err);
+    console.error("[UPLOAD] Uncaught Error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

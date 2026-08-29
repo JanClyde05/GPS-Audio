@@ -150,8 +150,9 @@ void localQueueUpdate() {
       LittleFS.remove(_metaPath(i));
       Serial.printf("[QUEUE] Item %d uploaded and removed\n", i);
     } else {
-      Serial.printf("[QUEUE] Item %d retry failed, keeping\n", i);
-      break;  // Stop retrying — backend likely still down
+      Serial.printf("[QUEUE] Item %d retry failed — purging stale item to unblock memory\n", i);
+      LittleFS.remove(_wavPath(i));
+      LittleFS.remove(_metaPath(i));
     }
   }
 
@@ -160,4 +161,17 @@ void localQueueUpdate() {
 
 uint8_t localQueueCount() {
   return _queueCount;
+}
+
+void localQueueClear() {
+  for (uint8_t i = 0; i < MAX_QUEUED; i++) {
+    if (LittleFS.exists(_wavPath(i))) {
+      LittleFS.remove(_wavPath(i));
+    }
+    if (LittleFS.exists(_metaPath(i))) {
+      LittleFS.remove(_metaPath(i));
+    }
+  }
+  _recount();
+  Serial.println(F("[QUEUE] Memory cleared! All stored flash items removed."));
 }

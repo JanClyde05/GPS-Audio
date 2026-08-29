@@ -25,4 +25,7 @@ size_t micReadChunk(int16_t* buf, size_t maxSamples);
 // Stop and deinitialize the mic (free resources)
 void micDeinit();
 
+// Get real-time ADC diagnostic readings (min, max, avg raw 12-bit ADC & dynamic DC bias)
+void micGetDiagnostics(int &minRaw, int &maxRaw, int &avgRaw, float &dcBias);
+
 #endif // GUARDIANTRACK_MIC_CAPTURE_H

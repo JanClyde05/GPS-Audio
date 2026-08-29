@@ -21,4 +21,7 @@ void localQueueUpdate();
 // Get number of pending items
 uint8_t localQueueCount();
 
+// Clear all queued flash items
+void localQueueClear();
+
 #endif // GUARDIANTRACK_LOCAL_QUEUE_H

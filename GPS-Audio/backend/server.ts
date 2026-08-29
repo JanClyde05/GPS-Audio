@@ -1,0 +1,272 @@
+import express from "express";
+import path from "path";
+import multer from "multer";
+import cors from "cors";
+import { createServer as createViteServer } from "vite";
+
+interface StoredEvent {
+  id: string;
+  lat: number;
+  lon: number;
+  type: 'telemetry' | 'audio' | 'sos';
+  isTelemetry?: boolean;
+  audioKey?: string;
+  audioSize?: number;
+  batt?: number | string;
+  signal?: number | string;
+  speed?: number;
+  accuracy?: number;
+  createdAt: string;
+  status?: 'normal' | 'alert' | 'critical';
+  title?: string;
+}
+
+// Stores binary WAV audio files in memory
+const audioStore = new Map<string, Buffer>();
+
+// Seed events list
+let eventsStore: StoredEvent[] = [
+  {
+    id: "evt-live-101",
+    lat: 17.649834,
+    lon: 121.744034,
+    type: "telemetry",
+    isTelemetry: true,
+    batt: 0,
+    signal: 94,
+    speed: 0.0,
+    accuracy: 3.5,
+    createdAt: new Date().toISOString(),
+    status: "normal",
+    title: "Wearable Initialized (USB Power)"
+  }
+];
+
+// Fallback sample WAV generator
+function generateSampleWavBuffer(durationSeconds = 4, freq = 440): Buffer {
+  const sampleRate = 8000;
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const numSamples = sampleRate * durationSeconds;
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const dataSize = numSamples * blockAlign;
+  const buffer = Buffer.alloc(44 + dataSize);
+
+  // RIFF header
+  buffer.write("RIFF", 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write("WAVE", 8);
+
+  // fmt chunk
+  buffer.write("fmt ", 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20); // PCM
+  buffer.writeUInt16LE(numChannels, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(byteRate, 28);
+  buffer.writeUInt16LE(blockAlign, 32);
+  buffer.writeUInt16LE(bitsPerSample, 34);
+
+  // data chunk
+  buffer.write("data", 36);
+  buffer.writeUInt32LE(dataSize, 40);
+
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const envelope = Math.sin((Math.PI * i) / numSamples);
+    const sample = Math.sin(2 * Math.PI * freq * t) * 0.4;
+    const intSample = Math.floor(sample * envelope * 32767);
+    buffer.writeInt16LE(intSample, offset);
+    offset += 2;
+  }
+
+  return buffer;
+}
+
+const sampleWavCache = generateSampleWavBuffer(4, 440);
+
+async function startServer() {
+  const app = express();
+  const PORT = process.env.PORT || 8888;
+
+  app.use(cors());
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+  app.use(express.raw({ type: "*/*", limit: "50mb" }));
+
+  const upload = multer({ storage: multer.memoryStorage() });
+
+  // 1. GET /api/events (Return events list or stream audio if audio query is present)
+  app.get("/api/events", (req, res) => {
+    const audioKey = req.query.audio as string;
+
+    if (audioKey) {
+      const storedBuffer = audioStore.get(audioKey);
+      const bufferToSend = storedBuffer || sampleWavCache;
+
+      res.setHeader("Content-Type", "audio/wav");
+      res.setHeader("Content-Length", bufferToSend.length);
+      res.setHeader("Accept-Ranges", "bytes");
+      return res.send(bufferToSend);
+    }
+
+    res.json({
+      status: "ok",
+      count: eventsStore.length,
+      events: eventsStore
+    });
+  });
+
+  // 2. DELETE /api/events (Clear logs)
+  app.delete("/api/events", (req, res) => {
+    eventsStore = [];
+    audioStore.clear();
+    res.json({
+      status: "ok",
+      message: "Events cleared successfully",
+      events: eventsStore
+    });
+  });
+
+  // 3. POST /clear-memory (Purge ESP32 Receiver & Server Memory)
+  app.post("/clear-memory", (req, res) => {
+    eventsStore = [];
+    audioStore.clear();
+    console.log("[SERVER] ⚡ Memory and event store purged.");
+    res.json({ status: "ok", message: "Receiver and server memory cleared" });
+  });
+
+  // 4. POST /api/upload (Telemetry & Audio upload endpoint for ESP32 and UI testing)
+  app.post("/api/upload", upload.single("audio"), (req: any, res) => {
+    try {
+      // Extract coordinates from query params, body, or headers
+      const latStr = (req.query.lat as string) || req.body.lat || req.headers["x-lat"] || "17.649834";
+      const lonStr = (req.query.lon as string) || req.body.lon || req.headers["x-lon"] || "121.744034";
+      const typeStr = (req.query.type as string) || req.body.type || req.headers["x-type"] || "audio";
+
+      const lat = parseFloat(latStr) || 17.649834;
+      const lon = parseFloat(lonStr) || 121.744034;
+      const type = typeStr === "telemetry" ? "telemetry" : (typeStr === "sos" ? "sos" : "audio");
+      const battRaw = req.body.batt ?? req.query.batt ?? req.headers["x-batt"];
+      const batt = (battRaw !== undefined && battRaw !== null && battRaw !== "") ? parseInt(String(battRaw), 10) : 0;
+
+      let audioBuffer: Buffer | null = null;
+      if (req.file) {
+        audioBuffer = req.file.buffer;
+      } else if (Buffer.isBuffer(req.body) && req.body.length > 0) {
+        audioBuffer = req.body;
+      }
+
+      const audioSize = audioBuffer ? audioBuffer.length : (isTelemetry ? 0 : 64044);
+      const eventId = isTelemetry ? "evt-telemetry-latest" : `evt-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const audioKey = !isTelemetry ? `${eventId}.wav` : undefined;
+
+      if (audioBuffer && audioKey) {
+        audioStore.set(audioKey, audioBuffer);
+      }
+
+      const newEvent: StoredEvent = {
+        id: eventId,
+        lat,
+        lon,
+        type,
+        isTelemetry,
+        audioKey,
+        audioSize,
+        batt,
+        signal: 95,
+        speed: parseFloat(req.body.speed || req.query.speed) || 1.1,
+        accuracy: 3.2,
+        createdAt: new Date().toISOString(),
+        status: isTelemetry ? "normal" : (type === "sos" ? "critical" : "alert"),
+        title: isTelemetry ? "Live GPS Telemetry Pin" : (type === "sos" ? "Emergency SOS Trigger" : "Wearable Audio Alert Capture")
+      };
+
+      // Remove previous telemetry ping if new telemetry arrives
+      if (isTelemetry) {
+        eventsStore = eventsStore.filter(e => e.id !== "evt-telemetry-latest");
+      }
+
+      eventsStore.unshift(newEvent);
+
+      if (eventsStore.length > 100) {
+        eventsStore = eventsStore.slice(0, 100);
+      }
+
+      console.log(`[UPLOAD] ✅ Event recorded: ${eventId} (${type}), GPS: ${lat}, ${lon}`);
+
+      res.status(200).json({
+        status: "success",
+        eventId,
+        event: newEvent
+      });
+    } catch (err: any) {
+      console.error("[UPLOAD] Error:", err);
+      res.status(500).json({ error: err.message || "Failed to process upload" });
+    }
+  });
+
+  // 5. POST /api/events/seed (Reset with seed data if cleared)
+  app.post("/api/events/seed", (req, res) => {
+    eventsStore = [
+      {
+        id: "evt-live-101",
+        lat: 17.649834,
+        lon: 121.744034,
+        type: "telemetry",
+        isTelemetry: true,
+        batt: 0,
+        signal: 94,
+        speed: 0.0,
+        accuracy: 3.5,
+        createdAt: new Date(Date.now() - 20 * 1000).toISOString(),
+        status: "normal",
+        title: "Wearable Active Telemetry"
+      },
+      {
+        id: "evt-audio-201",
+        lat: 17.649584,
+        lon: 121.744019,
+        type: "audio",
+        isTelemetry: false,
+        audioKey: "alert_sample_01.wav",
+        audioSize: 64044,
+        batt: 89,
+        signal: 90,
+        speed: 0.8,
+        accuracy: 4.2,
+        createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        status: "alert",
+        title: "Audio Spike Trigger (84 dB)"
+      }
+    ];
+    res.json({ status: "ok", events: eventsStore });
+  });
+
+  // Vite middleware setup
+  if (process.env.NODE_ENV !== "production") {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: "spa",
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
+    });
+  }
+
+  app.listen(Number(PORT), "0.0.0.0", () => {
+    console.log(`============================================================`);
+    console.log(`🛡️ GuardianTrack Redesigned Server Running!`);
+    console.log(`   URL: http://192.168.123.6:${PORT}/`);
+    console.log(`   Local URL: http://localhost:${PORT}/`);
+    console.log(`============================================================`);
+  });
+}
+
+startServer();

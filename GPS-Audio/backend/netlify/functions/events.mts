@@ -2,48 +2,47 @@
  * GuardianTrack Backend — Events Function
  * =========================================
  * Returns event log (JSON) for the parent dashboard.
- * Provides audio playback URLs via signed Blob access.
+ * Provides audio playback URLs via signed Blob access or in-memory fallback.
  *
  * GET /api/events          → all events (newest first)
  * GET /api/events?id=xxx   → single event detail
  * GET /api/events?audio=xxx → serve audio WAV file
  */
 
-import { getStore } from "@netlify/blobs";
 import type { Context } from "@netlify/functions";
+import { getEvent, getAudio, getEventIndex, clearAllStores } from "./store";
 
 export default async (request: Request, context: Context) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204 });
   }
 
-  if (request.method !== "GET") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
   try {
     const url = new URL(request.url);
     const audioKey = url.searchParams.get("audio");
     const eventId = url.searchParams.get("id");
+    const clearParam = url.searchParams.get("clear");
 
-    const audioStore = getStore("audio-clips");
-    const eventStore = getStore("events");
+    // ── Clear system memory & events ─────────────────────────────────────
+    if (request.method === "DELETE" || clearParam === "true") {
+      await clearAllStores();
+      return new Response(JSON.stringify({ status: "ok", message: "System memory & events cleared" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // ── Serve audio file directly ─────────────────────────────────────────
-
     if (audioKey) {
-      const audioBlob = await audioStore.get(audioKey, { type: "arrayBuffer" });
-      if (!audioBlob) {
+      const audioData = await getAudio(audioKey);
+      if (!audioData) {
         return new Response(JSON.stringify({ error: "Audio not found" }), {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
       }
 
-      return new Response(audioBlob, {
+      return new Response(audioData, {
         status: 200,
         headers: {
           "Content-Type": "audio/wav",
@@ -54,9 +53,8 @@ export default async (request: Request, context: Context) => {
     }
 
     // ── Single event detail ───────────────────────────────────────────────
-
     if (eventId) {
-      const event = await eventStore.get(eventId, { type: "json" });
+      const event = await getEvent(eventId);
       if (!event) {
         return new Response(JSON.stringify({ error: "Event not found" }), {
           status: 404,
@@ -71,25 +69,13 @@ export default async (request: Request, context: Context) => {
     }
 
     // ── List all events ───────────────────────────────────────────────────
-
-    let eventIndex: string[] = [];
-    try {
-      const existing = await eventStore.get("_index", { type: "json" }) as string[] | null;
-      if (existing) eventIndex = existing;
-    } catch {
-      // No events yet
-    }
-
-    // Fetch event details for each ID
+    const index = await getEventIndex();
     const events = [];
-    for (const id of eventIndex) {
-      try {
-        const evt = await eventStore.get(id, { type: "json" });
-        if (evt) {
-          events.push(evt);
-        }
-      } catch {
-        // Skip corrupted entries
+
+    for (const id of index) {
+      const evt = await getEvent(id);
+      if (evt) {
+        events.push(evt);
       }
     }
 

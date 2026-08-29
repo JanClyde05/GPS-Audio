@@ -35,24 +35,25 @@
 #define BUTTON_PIN       5    // Tactile button (internal pull-up)
 
 // ── Microphone Source Selection ─────────────────────────────────────────────
-// Set at compile time via platformio.ini build_flags:
-//   -DMIC_SOURCE=MIC_SOURCE_I2S_DIGITAL   (Plan A: MH-ET / INMP441)
-//   -DMIC_SOURCE=MIC_SOURCE_ADC_ANALOG    (Plan B: Custom electret + op-amp)
-
 #define MIC_SOURCE_I2S_DIGITAL  1
 #define MIC_SOURCE_ADC_ANALOG   2
+#define MIC_SOURCE_KY038_ANALOG 3   // KY-038 Electret Condenser Mic Module (A0 pin on GPIO4)
+#define MIC_SOURCE_TEST_TONE    4   // 440 Hz pure sine wave generator for hardware verification
 
-#ifndef MIC_SOURCE
-  #define MIC_SOURCE  MIC_SOURCE_I2S_DIGITAL  // Default: Plan A
-#endif
+// Set active microphone source (KY-038 Electret Condenser Mic Module on GPIO4)
+#define MIC_SOURCE  MIC_SOURCE_KY038_ANALOG
 
 // ── MH-ET / INMP441 I2S Mic Pins (Plan A) ──────────────────────────────────
 #define I2S_MIC_BCLK     6    // Bit clock
 #define I2S_MIC_WS       7    // Word select / LRCLK
 #define I2S_MIC_SD       8    // Serial data (data out from mic)
 
-// ── Custom Analog Mic Pin (Plan B) ──────────────────────────────────────────
-// Must be ADC1 channel (GPIO1–10). ADC2 is unreliable with WiFi/ESP-NOW active.
+// ── KY-038 / Analog Mic Pin (Plan B / KY-038) ──────────────────────────────
+// KY-038 Pin Wiring to ESP32-S3 SuperMini:
+//   KY-038 '+'  → 3V3 (3.3V Power)
+//   KY-038 '-'  → GND (Ground)
+//   KY-038 'A0' → GPIO4 (Analog Audio Signal)
+//   KY-038 'D0' → NC (Not Connected)
 #define ADC_MIC_PIN      4    // GPIO4 → ADC1_CH3
 
 // ── Audio Recording ─────────────────────────────────────────────────────────

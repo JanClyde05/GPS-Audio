@@ -159,7 +159,10 @@ body {
   border: 1px solid var(--border);
 }
 
-/* ── Map ────────────────────────────────────────────────────────────────── */
+.map-section {
+  position: relative;
+  z-index: 1;
+}
 
 .map-container {
   width: 100%;
@@ -168,13 +171,29 @@ body {
   overflow: hidden;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
+  position: relative;
+  z-index: 1;
+}
+
+.leaflet-container {
+  z-index: 1 !important;
+  background: var(--bg-secondary);
+}
+
+.leaflet-top, .leaflet-bottom {
+  z-index: 10 !important;
 }
 
 /* Override Leaflet tiles for dark mode */
 .leaflet-tile-pane { filter: brightness(0.7) contrast(1.1) saturate(0.8); }
-.leaflet-container { background: var(--bg-secondary); }
 
-/* ── Events List ────────────────────────────────────────────────────────── */
+/* ── Events Section ────────────────────────────────────────────────────────── */
+
+.events-section {
+  position: relative;
+  z-index: 2;
+  margin-top: 8px;
+}
 
 .events-list {
   display: flex;

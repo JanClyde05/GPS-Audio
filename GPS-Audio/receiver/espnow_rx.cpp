@@ -2,7 +2,7 @@
  * GuardianTrack Receiver — ESP-NOW Receiver
  * ==========================================
  * Listens for ESP-NOW packets from wearable.
- * Reassembles audio chunks by sequence number into a WAV buffer.
+ * Reassembles audio chunks in-place into a WAV buffer (zero secondary allocations).
  * Fires callback when AUDIO_END is received.
  */
 
@@ -47,16 +47,15 @@ static void _writeWavHeader(uint8_t* header, uint32_t dataSize) {
 
 // ── Reassembly State ────────────────────────────────────────────────────────
 
-static uint8_t* _audioBuffer   = nullptr;
-static size_t   _audioOffset   = 0;
-static size_t   _audioCapacity = 0;
-static uint16_t _chunksReceived = 0;
+static uint8_t* _audioBuffer     = nullptr;
+static size_t   _pcmOffset       = 0;
+static size_t   _audioCapacity   = 0;
+static uint16_t _chunksReceived   = 0;
 
-// Completed payload (ready for upload)
-static uint8_t* _completedWav  = nullptr;
-static size_t   _completedSize = 0;
-static float    _completedLat  = 0;
-static float    _completedLon  = 0;
+// Completed payload pointers
+static size_t   _completedSize   = 0;
+static float    _completedLat    = 0;
+static float    _completedLon    = 0;
 static volatile bool _payloadReady = false;
 
 // Callbacks
@@ -85,7 +84,6 @@ static void _onReceive(const uint8_t* macAddr,
       const TelemetryPayload* pkt = (const TelemetryPayload*)data;
       Serial.printf("[ENOW] Telemetry: lat=%.6f lon=%.6f batt=%d%%\n",
                     pkt->latitude, pkt->longitude, pkt->batteryPct);
-      // Store for callback in update()
       if (_telemetryCb) {
         _telemetryCb(pkt->latitude, pkt->longitude, pkt->batteryPct);
       }
@@ -96,15 +94,17 @@ static void _onReceive(const uint8_t* macAddr,
       if (len < (int)(sizeof(PacketHeader) + sizeof(uint16_t))) return;
       const AudioChunkPayload* pkt = (const AudioChunkPayload*)data;
 
-      if (_audioBuffer && (_audioOffset + pkt->chunkLen) <= _audioCapacity) {
-        memcpy(_audioBuffer + _audioOffset, pkt->data, pkt->chunkLen);
-        _audioOffset += pkt->chunkLen;
+      // Store PCM data offset by 44 bytes to leave room for the WAV header
+      size_t targetOffset = 44 + _pcmOffset;
+
+      if (_audioBuffer && (targetOffset + pkt->chunkLen) <= _audioCapacity) {
+        memcpy(_audioBuffer + targetOffset, pkt->data, pkt->chunkLen);
+        _pcmOffset += pkt->chunkLen;
         _chunksReceived++;
 
-        // Progress logging every 50 chunks
         if (_chunksReceived % 50 == 0) {
-          Serial.printf("[ENOW] Audio chunk %u received (%u bytes total)\n",
-                        _chunksReceived, _audioOffset);
+          Serial.printf("[ENOW] Audio chunk %u received (%u bytes PCM)\n",
+                        _chunksReceived, _pcmOffset);
         }
       } else {
         Serial.println(F("[ENOW] WARNING: Audio buffer overflow, chunk dropped!"));
@@ -117,34 +117,23 @@ static void _onReceive(const uint8_t* macAddr,
       const AudioEndPayload* pkt = (const AudioEndPayload*)data;
 
       Serial.printf("[ENOW] Audio END received: %u/%u chunks, %u bytes\n",
-                    _chunksReceived, pkt->totalChunks, _audioOffset);
+                    _chunksReceived, pkt->totalChunks, _pcmOffset);
 
-      if (_audioOffset > 0 && !_payloadReady) {
-        // Build WAV: 44-byte header + raw PCM data
-        size_t wavSize = 44 + _audioOffset;
-        _completedWav = (uint8_t*)ps_malloc(wavSize);
-        if (!_completedWav) {
-          _completedWav = (uint8_t*)malloc(wavSize);
-        }
+      if (_pcmOffset > 0 && !_payloadReady) {
+        // Write WAV header directly in-place into the first 44 bytes of _audioBuffer!
+        _writeWavHeader(_audioBuffer, _pcmOffset);
 
-        if (_completedWav) {
-          _writeWavHeader(_completedWav, _audioOffset);
-          memcpy(_completedWav + 44, _audioBuffer, _audioOffset);
-          _completedSize = wavSize;
-          _completedLat  = pkt->latitude;
-          _completedLon  = pkt->longitude;
-          _payloadReady  = true;
+        _completedSize = 44 + _pcmOffset;
+        _completedLat  = pkt->latitude;
+        _completedLon  = pkt->longitude;
+        _payloadReady  = true;
 
-          Serial.printf("[ENOW] WAV assembled: %u bytes (%.1f sec)\n",
-                        wavSize, (float)_audioOffset / (AUDIO_SAMPLE_RATE * 2));
-        } else {
-          Serial.println(F("[ENOW] FATAL: Failed to allocate WAV buffer!"));
-        }
+        Serial.printf("[ENOW] WAV assembled in-place: %u bytes (%.1f sec)\n",
+                      _completedSize, (float)_pcmOffset / (AUDIO_SAMPLE_RATE * 2));
+      } else {
+        _pcmOffset = 0;
+        _chunksReceived = 0;
       }
-
-      // Reset for next recording
-      _audioOffset    = 0;
-      _chunksReceived = 0;
       break;
     }
   }
@@ -153,24 +142,26 @@ static void _onReceive(const uint8_t* macAddr,
 // ── Public API ──────────────────────────────────────────────────────────────
 
 bool espnowRxInit(uint8_t channel) {
-  // Try PSRAM allocation first (35 sec = 560 KB)
-  _audioCapacity = RX_AUDIO_BUFFER_SIZE;
+  // Allocate total buffer (PCM capacity + 44 bytes for WAV header)
+  _audioCapacity = RX_AUDIO_BUFFER_SIZE + 44;
+
+  // Try PSRAM allocation first
   _audioBuffer = (uint8_t*)ps_malloc(_audioCapacity);
 
   if (!_audioBuffer) {
-    // Try internal RAM with full size
+    // Try internal RAM
     _audioBuffer = (uint8_t*)malloc(_audioCapacity);
   }
 
   if (!_audioBuffer) {
-    // Fall back to 15 seconds (~240 KB) in internal RAM
-    _audioCapacity = 8000 * 2 * 15;
+    // Fall back to 10 seconds (~160 KB + 44) in internal RAM
+    _audioCapacity = (8000 * 2 * 10) + 44;
     _audioBuffer = (uint8_t*)malloc(_audioCapacity);
   }
 
   if (!_audioBuffer) {
-    // Fall back to 10 seconds (~160 KB) in internal RAM
-    _audioCapacity = 8000 * 2 * 10;
+    // Fall back to 4 seconds (~64 KB + 44) in internal RAM
+    _audioCapacity = (8000 * 2 * 4) + 44;
     _audioBuffer = (uint8_t*)malloc(_audioCapacity);
   }
 
@@ -179,7 +170,7 @@ bool espnowRxInit(uint8_t channel) {
     return false;
   }
 
-  _audioOffset    = 0;
+  _pcmOffset      = 0;
   _chunksReceived = 0;
 
   if (esp_now_init() != ESP_OK) {
@@ -190,7 +181,7 @@ bool espnowRxInit(uint8_t channel) {
   esp_now_register_recv_cb(_onReceive);
 
   Serial.printf("[ENOW] ESP-NOW RX initialized on channel %d\n", channel);
-  Serial.printf("[ENOW] Reassembly buffer: %u bytes\n", _audioCapacity);
+  Serial.printf("[ENOW] In-place WAV buffer allocated: %u bytes\n", _audioCapacity);
   Serial.print(F("[ENOW] Receiver MAC: "));
   Serial.println(WiFi.macAddress());
 
@@ -209,12 +200,11 @@ void espnowRxUpdate() {
   if (_payloadReady && _audioCallback) {
     _payloadReady = false;
 
-    Serial.println(F("[ENOW] Delivering completed audio payload..."));
-    _audioCallback(_completedWav, _completedSize, _completedLat, _completedLon);
+    Serial.println(F("[ENOW] Delivering completed audio payload to HTTP uploader..."));
+    _audioCallback(_audioBuffer, _completedSize, _completedLat, _completedLon);
 
-    // Free the WAV buffer after callback returns
-    free(_completedWav);
-    _completedWav  = nullptr;
-    _completedSize = 0;
+    // Reset PCM offset for next recording (zero memory reallocation needed)
+    _pcmOffset      = 0;
+    _chunksReceived = 0;
   }
 }

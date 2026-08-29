@@ -16,6 +16,7 @@
 #include "wifi_manager.h"
 #include "config.h"
 #include "nvs_store.h"
+#include "local_queue.h"
 #include <WiFi.h>
 #include <DNSServer.h>
 #include <ESPAsyncWebServer.h>
@@ -260,6 +261,12 @@ static void _setupRoutes() {
   _server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
     String json = _scanNetworksJson();
     request->send(200, "application/json", json);
+  });
+
+  // Clear memory route (purge pending queue items)
+  _server.on("/clear-memory", HTTP_POST, [](AsyncWebServerRequest *request) {
+    localQueueClear();
+    request->send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Queue cleared\"}");
   });
 
   // Connect endpoint

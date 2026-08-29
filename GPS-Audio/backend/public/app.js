@@ -277,6 +277,38 @@ function formatBytes(bytes) {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
+async function purgeEsp32Queue() {
+  if (!confirm('Purge all pending ongoing uploads from the ESP32 Receiver memory?')) return;
+
+  const btn = document.getElementById('btn-purge-esp32');
+  if (btn) btn.innerText = '⏳ Purging...';
+
+  try {
+    await fetch('http://192.168.123.6:8888/clear-memory', { method: 'POST', mode: 'no-cors' });
+    alert('⚡ Request sent to ESP32 Receiver to purge its ongoing upload queue!');
+  } catch (err) {
+    console.error('Failed to purge ESP32 queue:', err);
+  } finally {
+    if (btn) btn.innerText = '⚡ Purge ESP32 Queue';
+  }
+}
+
+async function clearDashboardLogs() {
+  if (!confirm('Clear all event cards and audio alert history from the dashboard log?')) return;
+
+  const btn = document.getElementById('btn-clear-logs');
+  if (btn) btn.innerText = '⏳ Clearing...';
+
+  try {
+    await fetch('/api/events?clear=true', { method: 'DELETE' });
+    await loadEvents();
+  } catch (err) {
+    console.error('Failed to clear dashboard logs:', err);
+  } finally {
+    if (btn) btn.innerText = '🗑️ Clear Logs';
+  }
+}
+
 async function sendTestTelemetry() {
   const btn = document.getElementById('btn-test-gps');
   if (btn) btn.innerText = '⏳ Sending...';

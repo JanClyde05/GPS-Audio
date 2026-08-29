@@ -45,66 +45,13 @@ bool httpUpload(uint8_t* wavData, size_t wavSize, float lat, float lon) {
     return false;
   }
 
-  // Build multipart/form-data body
-  String boundary = "----GuardianTrackBoundary" + String(millis());
-  String contentType = "multipart/form-data; boundary=" + boundary;
+  http.addHeader("Content-Type", "audio/wav");
+  http.addHeader("X-Lat", String(lat, 6));
+  http.addHeader("X-Lon", String(lon, 6));
+  http.addHeader("X-Timestamp", String(millis()));
 
-  // Build the multipart body manually
-  // We construct the parts around the binary WAV data
-
-  // Part 1: latitude
-  String preAudio = "";
-  preAudio += "--" + boundary + "\r\n";
-  preAudio += "Content-Disposition: form-data; name=\"lat\"\r\n\r\n";
-  preAudio += String(lat, 6) + "\r\n";
-
-  // Part 2: longitude
-  preAudio += "--" + boundary + "\r\n";
-  preAudio += "Content-Disposition: form-data; name=\"lon\"\r\n\r\n";
-  preAudio += String(lon, 6) + "\r\n";
-
-  // Part 3: timestamp
-  preAudio += "--" + boundary + "\r\n";
-  preAudio += "Content-Disposition: form-data; name=\"timestamp\"\r\n\r\n";
-  preAudio += String(millis()) + "\r\n";
-
-  // Part 4: audio file (WAV)
-  preAudio += "--" + boundary + "\r\n";
-  preAudio += "Content-Disposition: form-data; name=\"audio\"; filename=\"recording.wav\"\r\n";
-  preAudio += "Content-Type: audio/wav\r\n\r\n";
-
-  String postAudio = "\r\n--" + boundary + "--\r\n";
-
-  // Calculate total content length
-  size_t totalLen = preAudio.length() + wavSize + postAudio.length();
-
-  http.addHeader("Content-Type", contentType);
-  http.addHeader("Content-Length", String(totalLen));
-
-  // We need to send the body manually since HTTPClient doesn't have
-  // great multipart support. Use the stream approach.
-  // Allocate a contiguous buffer (may be large — use PSRAM)
-  uint8_t* body = (uint8_t*)ps_malloc(totalLen);
-  if (!body) {
-    body = (uint8_t*)malloc(totalLen);
-  }
-
-  if (!body) {
-    Serial.println(F("[HTTP] Failed to allocate upload buffer!"));
-    http.end();
-    return false;
-  }
-
-  size_t offset = 0;
-  memcpy(body + offset, preAudio.c_str(), preAudio.length());
-  offset += preAudio.length();
-  memcpy(body + offset, wavData, wavSize);
-  offset += wavSize;
-  memcpy(body + offset, postAudio.c_str(), postAudio.length());
-
-  int httpCode = http.POST(body, totalLen);
-
-  free(body);
+  // Stream wavData directly over socket — ZERO secondary RAM allocations
+  int httpCode = http.POST(wavData, wavSize);
 
   if (httpCode == 200 || httpCode == 201) {
     String response = http.getString();
@@ -125,7 +72,12 @@ bool httpUpload(uint8_t* wavData, size_t wavSize, float lat, float lon) {
 bool httpSendTelemetry(float lat, float lon, uint8_t battPct) {
   if (lat == 0.0f && lon == 0.0f) return false;
 
-  String url = String(BACKEND_URL) + String(UPLOAD_ENDPOINT);
+  String url = String(BACKEND_URL) + String(UPLOAD_ENDPOINT) +
+               "?lat=" + String(lat, 6) +
+               "&lon=" + String(lon, 6) +
+               "&type=telemetry" +
+               "&batt=" + String(battPct);
+
   HTTPClient http;
   http.setTimeout(5000);
 
@@ -137,33 +89,10 @@ bool httpSendTelemetry(float lat, float lon, uint8_t battPct) {
     return false;
   }
 
-  String boundary = "----GuardianTrackBoundary" + String(millis());
-  String contentType = "multipart/form-data; boundary=" + boundary;
-
-  String body = "";
-  body += "--" + boundary + "\r\n";
-  body += "Content-Disposition: form-data; name=\"lat\"\r\n\r\n";
-  body += String(lat, 6) + "\r\n";
-
-  body += "--" + boundary + "\r\n";
-  body += "Content-Disposition: form-data; name=\"lon\"\r\n\r\n";
-  body += String(lon, 6) + "\r\n";
-
-  body += "--" + boundary + "\r\n";
-  body += "Content-Disposition: form-data; name=\"batt\"\r\n\r\n";
-  body += String(battPct) + "\r\n";
-
-  body += "--" + boundary + "\r\n";
-  body += "Content-Disposition: form-data; name=\"type\"\r\n\r\n";
-  body += "telemetry\r\n";
-
-  body += "--" + boundary + "--\r\n";
-
-  http.addHeader("Content-Type", contentType);
-  int httpCode = http.POST(body);
+  int httpCode = http.POST("");
 
   if (httpCode == 200 || httpCode == 201) {
-    Serial.printf("[HTTP] Telemetry uploaded to Netlify! (lat=%.6f, lon=%.6f)\n", lat, lon);
+    Serial.printf("[HTTP] 📡 Live location uploaded: lat=%.6f, lon=%.6f\n", lat, lon);
     http.end();
     return true;
   } else {
