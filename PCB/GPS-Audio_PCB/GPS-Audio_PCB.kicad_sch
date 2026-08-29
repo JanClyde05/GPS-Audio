@@ -3506,7 +3506,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Button_Switch_THT:SW_TH_Tactile_Omron_B3F-100x"
 			(at 106.68 50.8 0)
 			(effects
 				(font

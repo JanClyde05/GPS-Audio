@@ -149,6 +149,7 @@ async function startServer() {
       const lat = parseFloat(latStr) || 17.649834;
       const lon = parseFloat(lonStr) || 121.744034;
       const type = typeStr === "telemetry" ? "telemetry" : (typeStr === "sos" ? "sos" : "audio");
+      const isTelemetry = type === "telemetry";
       const battRaw = req.body.batt ?? req.query.batt ?? req.headers["x-batt"];
       const batt = (battRaw !== undefined && battRaw !== null && battRaw !== "") ? parseInt(String(battRaw), 10) : 0;
 
