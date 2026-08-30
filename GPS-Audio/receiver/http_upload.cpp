@@ -49,6 +49,7 @@ bool httpUpload(uint8_t* wavData, size_t wavSize, float lat, float lon) {
   http.addHeader("X-Lat", String(lat, 6));
   http.addHeader("X-Lon", String(lon, 6));
   http.addHeader("X-Timestamp", String(millis()));
+  http.addHeader("X-Type", "audio");
 
   // Stream wavData directly over socket — ZERO secondary RAM allocations
   int httpCode = http.POST(wavData, wavSize);
@@ -89,14 +90,22 @@ bool httpSendTelemetry(float lat, float lon, uint8_t battPct) {
     return false;
   }
 
+  http.addHeader("X-Lat", String(lat, 6));
+  http.addHeader("X-Lon", String(lon, 6));
+  http.addHeader("X-Batt", String(battPct));
+  http.addHeader("X-Type", "telemetry");
+
   int httpCode = http.POST("");
 
   if (httpCode == 200 || httpCode == 201) {
-    Serial.printf("[HTTP] 📡 Live location uploaded: lat=%.6f, lon=%.6f\n", lat, lon);
+    Serial.printf("[HTTP] 📡 Live location uploaded: lat=%.6f, lon=%.6f (batt=%d%%)\n", lat, lon, battPct);
     http.end();
     return true;
   } else {
-    Serial.printf("[HTTP] Telemetry POST failed, code: %d\n", httpCode);
+    Serial.printf("[HTTP] ⚠ Telemetry POST failed, code: %d\n", httpCode);
+    if (httpCode > 0) {
+      Serial.printf("[HTTP] Response: %s\n", http.getString().c_str());
+    }
     http.end();
     return false;
   }

@@ -10,10 +10,11 @@ interface TelemetryBarProps {
 
 export const TelemetryBar: React.FC<TelemetryBarProps> = ({ latestEvent, events }) => {
   const audioAlerts = events.filter((e) => !e.isTelemetry);
-  const isLiveTelemetry = latestEvent?.isTelemetry === true;
   
-  // Check latest telemetry packet for exact battery reading
+  // Check latest telemetry packet for exact GPS and battery reading
   const telemetryEvt = events.find((e) => e.isTelemetry) || (latestEvent?.isTelemetry ? latestEvent : null);
+  const activeEvt = telemetryEvt || latestEvent;
+  const isLiveTelemetry = activeEvt?.isTelemetry === true;
   const hasTelemetry = telemetryEvt !== null && telemetryEvt !== undefined;
   const rawBatt = telemetryEvt?.batt !== undefined && telemetryEvt?.batt !== null ? Number(telemetryEvt.batt) : null;
 
@@ -42,8 +43,8 @@ export const TelemetryBar: React.FC<TelemetryBarProps> = ({ latestEvent, events 
     }
   }
 
-  const speed = latestEvent?.speed !== undefined ? latestEvent.speed : 0.0;
-  const accuracy = latestEvent?.accuracy !== undefined ? latestEvent.accuracy : 3.5;
+  const speed = activeEvt?.speed !== undefined ? activeEvt.speed : 0.0;
+  const accuracy = activeEvt?.accuracy !== undefined ? activeEvt.accuracy : 3.5;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -56,11 +57,11 @@ export const TelemetryBar: React.FC<TelemetryBarProps> = ({ latestEvent, events 
           <Compass className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
         </div>
         <div className="font-mono text-sm sm:text-base font-black tracking-tight text-neutral-950 dark:text-white truncate">
-          {latestEvent ? formatCoords(latestEvent.lat, latestEvent.lon) : '17.649834° N, 121.744034° E'}
+          {activeEvt ? formatCoords(activeEvt.lat, activeEvt.lon) : 'No GPS Signal'}
         </div>
         <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-mono font-semibold text-neutral-500 dark:text-neutral-400">
           <span className={`w-2 h-2 rounded-full inline-block shrink-0 ${isLiveTelemetry ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-          <span className="truncate">{isLiveTelemetry ? 'SYNC:' : 'LAST FIX:'} {formatTime(latestEvent?.createdAt)}</span>
+          <span className="truncate">{isLiveTelemetry ? 'SYNC:' : 'LAST FIX:'} {formatTime(activeEvt?.createdAt)}</span>
         </div>
       </div>
 

@@ -185,9 +185,9 @@ async function startServer() {
         title: isTelemetry ? "Live GPS Telemetry Pin" : (type === "sos" ? "Emergency SOS Trigger" : "Wearable Audio Alert Capture")
       };
 
-      // Remove previous telemetry ping if new telemetry arrives
+      // Remove previous telemetry pings if new telemetry arrives
       if (isTelemetry) {
-        eventsStore = eventsStore.filter(e => e.id !== "evt-telemetry-latest");
+        eventsStore = eventsStore.filter(e => !e.isTelemetry);
       }
 
       eventsStore.unshift(newEvent);
@@ -209,13 +209,13 @@ async function startServer() {
         fetch("https://ntfy.sh/gps-audio-notifications", {
           method: "POST",
           headers: {
-            "Title": "🚨 GuardianTrack Alert",
+            "Title": "GuardianTrack Alert",
             "Priority": "high",
             "Tags": "rotating_light,microphone",
             "Click": dashboardUrl,
             "Actions": `view, Open Dashboard, ${dashboardUrl}`,
           },
-          body: `Audio alert received!\n📍 Location: ${lat}, ${lon}\n⏱ Duration: ~${durationSec}s\n\nTap to listen and view location.`,
+          body: `🚨 Audio alert received!\n📍 Location: ${lat}, ${lon}\n⏱ Duration: ~${durationSec}s\n\nTap to listen and view location.`,
         }).then(() => console.log(`[NTFY] Alert sent for ${eventId}`))
           .catch((err) => console.error("[NTFY] Error sending alert:", err));
       }

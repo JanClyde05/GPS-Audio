@@ -23,14 +23,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const [copiedCoords, setCopiedCoords] = useState(false);
   const [mapStyle, setMapStyle] = useState<'monochrome' | 'standard'>('monochrome');
 
-  const latestEvent = events[0] || null;
+  const telemetryEvt = events.find((e) => e.isTelemetry) || (events[0]?.isTelemetry ? events[0] : null);
+  const activeEvt = telemetryEvt || events[0] || null;
 
   // Initialize Leaflet Map once
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    const initialLat = latestEvent?.lat && latestEvent.lat !== 0 ? latestEvent.lat : 14.599512;
-    const initialLon = latestEvent?.lon && latestEvent.lon !== 0 ? latestEvent.lon : 120.984222;
+    const initialLat = activeEvt?.lat && activeEvt.lat !== 0 ? activeEvt.lat : 17.649834;
+    const initialLon = activeEvt?.lon && activeEvt.lon !== 0 ? activeEvt.lon : 121.744034;
 
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
@@ -71,17 +72,17 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
     const bounds: [number, number][] = [];
 
-    events.forEach((evt, idx) => {
+    events.forEach((evt) => {
       if (!evt.lat || !evt.lon || (evt.lat === 0 && evt.lon === 0)) return;
 
-      const isLive = evt.isTelemetry || idx === 0;
+      const isLive = evt.isTelemetry === true;
       const isSelected = evt.id === selectedEventId;
 
       // Custom high-fidelity SVG icon for Leaflet
       const iconHtml = isLive
         ? `
           <div class="relative flex items-center justify-center w-8 h-8">
-            <div class="absolute w-8 h-8 rounded-full bg-neutral-900/30 dark:bg-white/30 pulse-ring"></div>
+            <div class="absolute w-8 h-8 rounded-full bg-emerald-500/30 pulse-ring"></div>
             <div class="w-4 h-4 rounded-full bg-neutral-950 dark:bg-white border-2 border-white dark:border-neutral-950 shadow-md flex items-center justify-center">
               <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
             </div>
@@ -167,8 +168,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   }, [events, selectedEventId, theme]);
 
   const handleCenterLive = () => {
-    if (!mapInstanceRef.current || !latestEvent?.lat || !latestEvent?.lon) return;
-    mapInstanceRef.current.setView([latestEvent.lat, latestEvent.lon], 16, { animate: true });
+    if (!mapInstanceRef.current || !activeEvt?.lat || !activeEvt?.lon) return;
+    mapInstanceRef.current.setView([activeEvt.lat, activeEvt.lon], 16, { animate: true });
   };
 
   const handleFitAll = () => {
@@ -180,8 +181,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   };
 
   const handleCopyCoords = () => {
-    if (!latestEvent?.lat || !latestEvent?.lon) return;
-    const text = `${latestEvent.lat.toFixed(6)}, ${latestEvent.lon.toFixed(6)}`;
+    if (!activeEvt?.lat || !activeEvt?.lon) return;
+    const text = `${activeEvt.lat.toFixed(6)}, ${activeEvt.lon.toFixed(6)}`;
     navigator.clipboard.writeText(text);
     setCopiedCoords(true);
     setTimeout(() => setCopiedCoords(false), 2000);
@@ -205,7 +206,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         {/* Live Coordinate readout with Copy button */}
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-1.5 font-mono font-bold text-xs px-3 py-1 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700">
-            <span>{latestEvent ? formatCoords(latestEvent.lat, latestEvent.lon) : '14.599512° N, 120.984222° E'}</span>
+            <span>{activeEvt ? formatCoords(activeEvt.lat, activeEvt.lon) : 'No GPS Signal'}</span>
           </div>
 
           <button

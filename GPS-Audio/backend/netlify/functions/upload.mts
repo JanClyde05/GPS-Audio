@@ -31,6 +31,7 @@ export default async (request: Request, context: Context) => {
     let lon = url.searchParams.get("lon") || request.headers.get("x-lon") || "0";
     let timestamp = url.searchParams.get("timestamp") || request.headers.get("x-timestamp") || Date.now().toString();
     let type = url.searchParams.get("type") || request.headers.get("x-type") || "audio";
+    let batt = url.searchParams.get("batt") || request.headers.get("x-batt") || "0";
     let audioBuffer: ArrayBuffer | null = null;
 
     const contentType = (request.headers.get("content-type") || "").toLowerCase();
@@ -46,6 +47,7 @@ export default async (request: Request, context: Context) => {
         if (formData.has("lon")) lon = (formData.get("lon") as string) || lon;
         if (formData.has("timestamp")) timestamp = (formData.get("timestamp") as string) || timestamp;
         if (formData.has("type")) type = (formData.get("type") as string) || type;
+        if (formData.has("batt")) batt = (formData.get("batt") as string) || batt;
       } catch (formErr) {
         console.warn("[UPLOAD] formData() parse issue — attempting direct body extraction:", formErr);
       }
@@ -66,20 +68,26 @@ export default async (request: Request, context: Context) => {
       const eventId = `evt_telemetry_latest`;
       const eventData = {
         id: eventId,
+        type: "telemetry",
         audioKey: "",
         lat: parseFloat(lat),
         lon: parseFloat(lon),
+        batt: parseInt(batt) || 0,
+        speed: 0.0,
+        accuracy: 3.5,
         timestamp: parseInt(timestamp) || Date.now(),
         createdAt: new Date().toISOString(),
         isTelemetry: true,
+        status: "normal",
+        title: "Live GPS Telemetry Pin",
       };
 
       await saveEvent(eventId, eventData);
       await updateEventIndex(eventId);
 
-      console.log(`[TELEMETRY] Live location updated: ${lat}, ${lon}`);
+      console.log(`[TELEMETRY] Live location updated: ${lat}, ${lon} (batt: ${batt}%)`);
 
-      return new Response(JSON.stringify({ status: "ok", type: "telemetry", lat, lon }), {
+      return new Response(JSON.stringify({ status: "ok", type: "telemetry", lat, lon, batt }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
@@ -129,13 +137,13 @@ export default async (request: Request, context: Context) => {
       await fetch(NTFY_TOPIC_URL, {
         method: "POST",
         headers: {
-          "Title": "🚨 GuardianTrack Alert",
+          "Title": "GuardianTrack Alert",
           "Priority": "high",
           "Tags": "rotating_light,microphone",
           "Click": dashboardUrl,
           "Actions": `view, Open Dashboard, ${dashboardUrl}`,
         },
-        body: `Audio alert received!\n📍 Location: ${lat}, ${lon}\n⏱ Duration: ~${durationSec}s\n\nTap to listen and view location.`,
+        body: `🚨 Audio alert received!\n📍 Location: ${lat}, ${lon}\n⏱ Duration: ~${durationSec}s\n\nTap to listen and view location.`,
       });
       console.log(`[NTFY] Notification sent for event ${eventId}`);
     } catch (ntfyErr) {
