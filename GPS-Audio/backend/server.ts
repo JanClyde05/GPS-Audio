@@ -25,22 +25,7 @@ interface StoredEvent {
 const audioStore = new Map<string, Buffer>();
 
 // Seed events list
-let eventsStore: StoredEvent[] = [
-  {
-    id: "evt-live-101",
-    lat: 17.649834,
-    lon: 121.744034,
-    type: "telemetry",
-    isTelemetry: true,
-    batt: 0,
-    signal: 94,
-    speed: 0.0,
-    accuracy: 3.5,
-    createdAt: new Date().toISOString(),
-    status: "normal",
-    title: "Wearable Initialized (USB Power)"
-  }
-];
+let eventsStore: StoredEvent[] = [];
 
 // Fallback sample WAV generator
 function generateSampleWavBuffer(durationSeconds = 4, freq = 440): Buffer {
@@ -142,12 +127,12 @@ async function startServer() {
   app.post("/api/upload", upload.single("audio"), (req: any, res) => {
     try {
       // Extract coordinates from query params, body, or headers
-      const latStr = (req.query.lat as string) || req.body.lat || req.headers["x-lat"] || "17.649834";
-      const lonStr = (req.query.lon as string) || req.body.lon || req.headers["x-lon"] || "121.744034";
+      const latStr = (req.query.lat as string) || req.body.lat || req.headers["x-lat"] || "0";
+      const lonStr = (req.query.lon as string) || req.body.lon || req.headers["x-lon"] || "0";
       const typeStr = (req.query.type as string) || req.body.type || req.headers["x-type"] || "audio";
 
-      const lat = parseFloat(latStr) || 17.649834;
-      const lon = parseFloat(lonStr) || 121.744034;
+      const lat = parseFloat(latStr) || 0;
+      const lon = parseFloat(lonStr) || 0;
       const type = typeStr === "telemetry" ? "telemetry" : (typeStr === "sos" ? "sos" : "audio");
       const isTelemetry = type === "telemetry";
       const battRaw = req.body.batt ?? req.query.batt ?? req.headers["x-batt"];
@@ -192,6 +177,26 @@ async function startServer() {
 
       eventsStore.unshift(newEvent);
 
+      // When an audio alert has valid GPS, also update the live telemetry pin
+      // so the map always shows the last known location
+      if (!isTelemetry && lat !== 0 && lon !== 0) {
+        eventsStore = eventsStore.filter(e => !e.isTelemetry);
+        const telemetryUpdate: StoredEvent = {
+          id: "evt-telemetry-latest",
+          lat,
+          lon,
+          type: "telemetry",
+          isTelemetry: true,
+          batt: 0,
+          speed: 0.0,
+          accuracy: 0,
+          createdAt: new Date().toISOString(),
+          status: "normal",
+          title: "Last Known Location (from Audio Alert)"
+        };
+        eventsStore.unshift(telemetryUpdate);
+      }
+
       if (eventsStore.length > 100) {
         eventsStore = eventsStore.slice(0, 100);
       }
@@ -233,38 +238,7 @@ async function startServer() {
 
   // 5. POST /api/events/seed (Reset with seed data if cleared)
   app.post("/api/events/seed", (req, res) => {
-    eventsStore = [
-      {
-        id: "evt-live-101",
-        lat: 17.649834,
-        lon: 121.744034,
-        type: "telemetry",
-        isTelemetry: true,
-        batt: 0,
-        signal: 94,
-        speed: 0.0,
-        accuracy: 3.5,
-        createdAt: new Date(Date.now() - 20 * 1000).toISOString(),
-        status: "normal",
-        title: "Wearable Active Telemetry"
-      },
-      {
-        id: "evt-audio-201",
-        lat: 17.649584,
-        lon: 121.744019,
-        type: "audio",
-        isTelemetry: false,
-        audioKey: "alert_sample_01.wav",
-        audioSize: 64044,
-        batt: 89,
-        signal: 90,
-        speed: 0.8,
-        accuracy: 4.2,
-        createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        status: "alert",
-        title: "Audio Spike Trigger (84 dB)"
-      }
-    ];
+    eventsStore = [];
     res.json({ status: "ok", events: eventsStore });
   });
 

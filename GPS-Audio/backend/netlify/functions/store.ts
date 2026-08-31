@@ -80,22 +80,6 @@ export const DEFAULT_SEED_EVENTS = [
     createdAt: new Date().toISOString(),
     status: "normal",
     title: "Awaiting Wearable GPS Fix"
-  },
-  {
-    id: "evt-audio-201",
-    lat: 17.649584,
-    lon: 121.744019,
-    type: "audio",
-    isTelemetry: false,
-    audioKey: "alert_sample_01.wav",
-    audioSize: 64044,
-    batt: 89,
-    signal: 90,
-    speed: 0.8,
-    accuracy: 4.2,
-    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    status: "alert",
-    title: "Audio Spike Trigger (84 dB)"
   }
 ];
 

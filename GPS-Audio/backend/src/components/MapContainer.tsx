@@ -30,8 +30,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    const initialLat = activeEvt?.lat && activeEvt.lat !== 0 ? activeEvt.lat : 17.649834;
-    const initialLon = activeEvt?.lon && activeEvt.lon !== 0 ? activeEvt.lon : 121.744034;
+    const initialLat = activeEvt?.lat && activeEvt.lat !== 0 ? activeEvt.lat : 14.5995;
+    const initialLon = activeEvt?.lon && activeEvt.lon !== 0 ? activeEvt.lon : 120.9842;
 
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
