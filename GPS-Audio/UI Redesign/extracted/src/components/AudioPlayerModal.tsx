@@ -51,15 +51,16 @@ export const AudioPlayerModal: React.FC<AudioPlayerModalProps> = ({
       miniMapInstanceRef.current = null;
     }
 
-    const lat = event.lat && event.lat !== 0 ? event.lat : 14.599512;
-    const lon = event.lon && event.lon !== 0 ? event.lon : 120.984222;
+    const hasGps = Boolean(event.lat && event.lon && !(event.lat === 0 && event.lon === 0));
+    const lat = hasGps ? event.lat : 14.5995;
+    const lon = hasGps ? event.lon : 120.9842;
 
     const miniMap = L.map(miniMapContainerRef.current, {
       zoomControl: false,
       attributionControl: false,
       dragging: true,
       scrollWheelZoom: false,
-    }).setView([lat, lon], 16);
+    }).setView([lat, lon], hasGps ? 16 : 5);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,

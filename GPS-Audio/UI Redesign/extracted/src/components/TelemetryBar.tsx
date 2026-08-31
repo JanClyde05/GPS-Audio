@@ -10,24 +10,32 @@ interface TelemetryBarProps {
 
 export const TelemetryBar: React.FC<TelemetryBarProps> = ({ latestEvent, events }) => {
   const audioAlerts = events.filter((e) => !e.isTelemetry);
-  const batteryLevel = latestEvent?.batt !== undefined ? Number(latestEvent.batt) : 88;
-  const speed = latestEvent?.speed !== undefined ? latestEvent.speed : 1.2;
-  const accuracy = latestEvent?.accuracy !== undefined ? latestEvent.accuracy : 3.5;
+  const telemetryEvt = events.find((e) => e.isTelemetry) || null;
+  const hasValidGps = telemetryEvt !== null && 
+    telemetryEvt.lat !== undefined && telemetryEvt.lon !== undefined &&
+    !(telemetryEvt.lat === 0 && telemetryEvt.lon === 0);
+
+  const isLiveTelemetry = hasValidGps;
+  const batteryLevel = telemetryEvt?.batt !== undefined ? Number(telemetryEvt.batt) : 0;
+  const speed = hasValidGps && telemetryEvt?.speed !== undefined ? telemetryEvt.speed : 0.0;
+  const accuracy = hasValidGps && telemetryEvt?.accuracy !== undefined ? telemetryEvt.accuracy : 0.0;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       {/* Tile 1: Live Fix & Coords */}
       <div className="p-4 sm:p-5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-800 shadow-xs transition-colors">
         <div className="flex items-center justify-between text-neutral-500 dark:text-neutral-400 mb-2">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">Position Fix</span>
+          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-neutral-500 dark:text-neutral-400">
+            {isLiveTelemetry ? 'LIVE POSITION FIX' : 'LAST POSITION FIX'}
+          </span>
           <Compass className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
         </div>
         <div className="font-mono text-sm sm:text-base font-black tracking-tight text-neutral-950 dark:text-white truncate">
-          {latestEvent ? formatCoords(latestEvent.lat, latestEvent.lon) : '14.599512° N, 120.984222° E'}
+          {hasValidGps ? formatCoords(telemetryEvt!.lat, telemetryEvt!.lon) : 'No GPS Signal'}
         </div>
         <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-mono font-semibold text-neutral-500 dark:text-neutral-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shrink-0" />
-          <span className="truncate">SYNC: {formatTime(latestEvent?.createdAt)}</span>
+          <span className={`w-2 h-2 rounded-full inline-block shrink-0 ${isLiveTelemetry ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+          <span className="truncate">{isLiveTelemetry ? 'SYNC:' : 'AWAITING GPS:'} {hasValidGps ? formatTime(telemetryEvt?.createdAt) : 'NO FIX'}</span>
         </div>
       </div>
 

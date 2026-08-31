@@ -23,8 +23,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const [copiedCoords, setCopiedCoords] = useState(false);
   const [mapStyle, setMapStyle] = useState<'monochrome' | 'standard'>('monochrome');
 
-  const telemetryEvt = events.find((e) => e.isTelemetry) || (events[0]?.isTelemetry ? events[0] : null);
-  const activeEvt = telemetryEvt || events[0] || null;
+  const telemetryEvt = events.find((e) => e.isTelemetry && e.lat !== 0 && e.lon !== 0) || null;
+  const activeEvt = telemetryEvt;
 
   // Initialize Leaflet Map once
   useEffect(() => {

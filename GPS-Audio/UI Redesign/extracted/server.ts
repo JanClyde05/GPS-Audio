@@ -22,68 +22,7 @@ interface StoredEvent {
 }
 
 // In-memory events storage seeded with realistic sample events
-let eventsStore: StoredEvent[] = [
-  {
-    id: "evt-live-101",
-    lat: 14.599512,
-    lon: 120.984222,
-    type: "telemetry",
-    isTelemetry: true,
-    batt: 88,
-    signal: 94,
-    speed: 1.2,
-    accuracy: 3.5,
-    createdAt: new Date(Date.now() - 45 * 1000).toISOString(),
-    status: "normal",
-    title: "Wearable Active Telemetry"
-  },
-  {
-    id: "evt-audio-201",
-    lat: 14.598200,
-    lon: 120.982100,
-    type: "audio",
-    isTelemetry: false,
-    audioKey: "alert_sample_01.wav",
-    audioSize: 64000,
-    batt: 89,
-    signal: 90,
-    speed: 0.8,
-    accuracy: 4.2,
-    createdAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
-    status: "alert",
-    title: "Noise Threshold Alert (84 dB)"
-  },
-  {
-    id: "evt-audio-202",
-    lat: 14.596400,
-    lon: 120.979800,
-    type: "audio",
-    isTelemetry: false,
-    audioKey: "alert_sample_02.wav",
-    audioSize: 96000,
-    batt: 92,
-    signal: 85,
-    speed: 0.4,
-    accuracy: 3.1,
-    createdAt: new Date(Date.now() - 24 * 60 * 1000).toISOString(),
-    status: "alert",
-    title: "Vocal Distress Trigger"
-  },
-  {
-    id: "evt-telemetry-102",
-    lat: 14.594800,
-    lon: 120.978200,
-    type: "telemetry",
-    isTelemetry: true,
-    batt: 95,
-    signal: 92,
-    speed: 3.6,
-    accuracy: 2.8,
-    createdAt: new Date(Date.now() - 55 * 60 * 1000).toISOString(),
-    status: "normal",
-    title: "Routine Geofence Uplink"
-  }
-];
+let eventsStore: StoredEvent[] = [];
 
 // Helper to generate a minimal clean PCM WAV beep tone for preview playback
 function generateSampleWavBuffer(durationSeconds = 3, freq = 440): Buffer {
@@ -174,8 +113,8 @@ async function startServer() {
   // 3. POST /api/upload (Telemetry & Audio upload endpoint for ESP32 and UI testing)
   app.post("/api/upload", upload.single("audio"), (req, res) => {
     try {
-      const lat = parseFloat(req.body.lat) || 14.599512;
-      const lon = parseFloat(req.body.lon) || 120.984222;
+      const lat = parseFloat(req.body.lat) || 0;
+      const lon = parseFloat(req.body.lon) || 0;
       const type = (req.body.type === "telemetry" ? "telemetry" : (req.body.type === "sos" ? "sos" : "audio")) as 'telemetry' | 'audio' | 'sos';
       const isTelemetry = type === "telemetry";
       const batt = req.body.batt ? parseInt(req.body.batt) : 85;
@@ -201,6 +140,25 @@ async function startServer() {
       // Put latest event at the top
       eventsStore.unshift(newEvent);
 
+      // When an audio alert has valid GPS, update the live telemetry pin to match
+      if (!isTelemetry && lat !== 0 && lon !== 0) {
+        eventsStore = eventsStore.filter(e => !e.isTelemetry);
+        const telemetryUpdate: StoredEvent = {
+          id: "evt-telemetry-latest",
+          lat,
+          lon,
+          type: "telemetry",
+          isTelemetry: true,
+          batt,
+          speed: 0.0,
+          accuracy: 0.0,
+          createdAt: new Date().toISOString(),
+          status: "normal",
+          title: "Last Known Location (from Audio Alert)"
+        };
+        eventsStore.unshift(telemetryUpdate);
+      }
+
       // Keep maximum 100 events
       if (eventsStore.length > 100) {
         eventsStore = eventsStore.slice(0, 100);
@@ -217,54 +175,7 @@ async function startServer() {
 
   // 4. POST /api/events/seed (Reset with seed data if cleared)
   app.post("/api/events/seed", (req, res) => {
-    eventsStore = [
-      {
-        id: "evt-live-101",
-        lat: 14.599512,
-        lon: 120.984222,
-        type: "telemetry",
-        isTelemetry: true,
-        batt: 88,
-        signal: 94,
-        speed: 1.2,
-        accuracy: 3.5,
-        createdAt: new Date(Date.now() - 20 * 1000).toISOString(),
-        status: "normal",
-        title: "Wearable Active Telemetry"
-      },
-      {
-        id: "evt-audio-201",
-        lat: 14.598200,
-        lon: 120.982100,
-        type: "audio",
-        isTelemetry: false,
-        audioKey: "alert_sample_01.wav",
-        audioSize: 64000,
-        batt: 89,
-        signal: 90,
-        speed: 0.8,
-        accuracy: 4.2,
-        createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-        status: "alert",
-        title: "Audio Spike Trigger (84 dB)"
-      },
-      {
-        id: "evt-audio-202",
-        lat: 14.596400,
-        lon: 120.979800,
-        type: "audio",
-        isTelemetry: false,
-        audioKey: "alert_sample_02.wav",
-        audioSize: 96000,
-        batt: 92,
-        signal: 85,
-        speed: 0.4,
-        accuracy: 3.1,
-        createdAt: new Date(Date.now() - 22 * 60 * 1000).toISOString(),
-        status: "alert",
-        title: "Vocal Distress Trigger"
-      }
-    ];
+    eventsStore = [];
     res.json({ status: "ok", events: eventsStore });
   });
 

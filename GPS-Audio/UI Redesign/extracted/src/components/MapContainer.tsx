@@ -23,14 +23,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const [copiedCoords, setCopiedCoords] = useState(false);
   const [mapStyle, setMapStyle] = useState<'monochrome' | 'standard'>('monochrome');
 
-  const latestEvent = events[0] || null;
+  const telemetryEvt = events.find((e) => e.isTelemetry && e.lat !== 0 && e.lon !== 0) || null;
+  const activeEvt = telemetryEvt;
 
   // Initialize Leaflet Map once
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    const initialLat = latestEvent?.lat && latestEvent.lat !== 0 ? latestEvent.lat : 14.599512;
-    const initialLon = latestEvent?.lon && latestEvent.lon !== 0 ? latestEvent.lon : 120.984222;
+    const initialLat = activeEvt?.lat && activeEvt.lat !== 0 ? activeEvt.lat : 14.5995;
+    const initialLon = activeEvt?.lon && activeEvt.lon !== 0 ? activeEvt.lon : 120.9842;
 
     const map = L.map(mapContainerRef.current, {
       zoomControl: false,
@@ -205,7 +206,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         {/* Live Coordinate readout with Copy button */}
         <div className="flex items-center gap-2">
           <div className="hidden sm:flex items-center gap-1.5 font-mono font-bold text-xs px-3 py-1 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-300 dark:border-neutral-700">
-            <span>{latestEvent ? formatCoords(latestEvent.lat, latestEvent.lon) : '14.599512° N, 120.984222° E'}</span>
+            <span>{activeEvt ? formatCoords(activeEvt.lat, activeEvt.lon) : 'No GPS Signal'}</span>
           </div>
 
           <button
