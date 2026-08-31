@@ -124,6 +124,30 @@ export default async (request: Request, context: Context) => {
     await saveEvent(eventId, eventData);
     await updateEventIndex(eventId);
 
+    // Also update the live telemetry pin to the audio alert's GPS coordinates
+    // so the "last fix" position always reflects the most recent known location
+    const parsedLat = parseFloat(lat);
+    const parsedLon = parseFloat(lon);
+    if (parsedLat !== 0 || parsedLon !== 0) {
+      const telemetryUpdate = {
+        id: "evt_telemetry_latest",
+        type: "telemetry",
+        audioKey: "",
+        lat: parsedLat,
+        lon: parsedLon,
+        batt: 0,
+        speed: 0.0,
+        accuracy: 0,
+        timestamp: Date.now(),
+        createdAt: new Date().toISOString(),
+        isTelemetry: true,
+        status: "normal",
+        title: "Last Known Location (from Audio Alert)",
+      };
+      await saveEvent("evt_telemetry_latest", telemetryUpdate);
+      await updateEventIndex("evt_telemetry_latest");
+    }
+
     console.log(`[UPLOAD] ✅ Audio Event ${eventId}: ${audioData.byteLength} bytes, GPS: ${lat}, ${lon}`);
 
     // ── Fire ntfy notification ────────────────────────────────────────────
