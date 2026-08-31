@@ -16,12 +16,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 
-static WiFiClientSecure _secureClient;
-
 void httpUploadInit() {
-  // Use default CA bundle for HTTPS (covers *.netlify.app)
-  _secureClient.setInsecure();  // Skip cert verification for now
-  // For production: _secureClient.setCACert(rootCACert);
   Serial.println(F("[HTTP] Upload client initialized"));
 }
 
@@ -37,37 +32,65 @@ bool httpUpload(uint8_t* wavData, size_t wavSize, float lat, float lon) {
   HTTPClient http;
   http.setTimeout(HTTP_TIMEOUT_MS);
 
-  WiFiClient plainClient;
-  bool begun = url.startsWith("https://") ? http.begin(_secureClient, url) : http.begin(plainClient, url);
+  bool success = false;
 
-  if (!begun) {
-    Serial.println(F("[HTTP] Connection failed!"));
-    return false;
-  }
+  if (url.startsWith("https://")) {
+    WiFiClientSecure secureClient;
+    secureClient.setInsecure(); // Skip cert verification for dev/cloud endpoints
 
-  http.addHeader("Content-Type", "audio/wav");
-  http.addHeader("X-Lat", String(lat, 6));
-  http.addHeader("X-Lon", String(lon, 6));
-  http.addHeader("X-Timestamp", String(millis()));
-  http.addHeader("X-Type", "audio");
+    if (http.begin(secureClient, url)) {
+      http.addHeader("Content-Type", "audio/wav");
+      http.addHeader("X-Lat", String(lat, 6));
+      http.addHeader("X-Lon", String(lon, 6));
+      http.addHeader("X-Timestamp", String(millis()));
+      http.addHeader("X-Type", "audio");
 
-  // Stream wavData directly over socket — ZERO secondary RAM allocations
-  int httpCode = http.POST(wavData, wavSize);
+      int httpCode = http.POST(wavData, wavSize);
 
-  if (httpCode == 200 || httpCode == 201) {
-    String response = http.getString();
-    Serial.printf("[HTTP] Upload success! Code: %d\n", httpCode);
-    Serial.printf("[HTTP] Response: %s\n", response.c_str());
-    http.end();
-    return true;
-  } else {
-    Serial.printf("[HTTP] Upload failed! Code: %d\n", httpCode);
-    if (httpCode > 0) {
-      Serial.printf("[HTTP] Response: %s\n", http.getString().c_str());
+      if (httpCode == 200 || httpCode == 201) {
+        String response = http.getString();
+        Serial.printf("[HTTP] Upload success! Code: %d\n", httpCode);
+        Serial.printf("[HTTP] Response: %s\n", response.c_str());
+        success = true;
+      } else {
+        Serial.printf("[HTTP] Upload failed! Code: %d\n", httpCode);
+        if (httpCode > 0) {
+          Serial.printf("[HTTP] Response: %s\n", http.getString().c_str());
+        }
+      }
+      http.end();
+    } else {
+      Serial.println(F("[HTTP] HTTPS connection init failed!"));
     }
-    http.end();
-    return false;
+  } else {
+    WiFiClient plainClient;
+    if (http.begin(plainClient, url)) {
+      http.addHeader("Content-Type", "audio/wav");
+      http.addHeader("X-Lat", String(lat, 6));
+      http.addHeader("X-Lon", String(lon, 6));
+      http.addHeader("X-Timestamp", String(millis()));
+      http.addHeader("X-Type", "audio");
+
+      int httpCode = http.POST(wavData, wavSize);
+
+      if (httpCode == 200 || httpCode == 201) {
+        String response = http.getString();
+        Serial.printf("[HTTP] Upload success! Code: %d\n", httpCode);
+        Serial.printf("[HTTP] Response: %s\n", response.c_str());
+        success = true;
+      } else {
+        Serial.printf("[HTTP] Upload failed! Code: %d\n", httpCode);
+        if (httpCode > 0) {
+          Serial.printf("[HTTP] Response: %s\n", http.getString().c_str());
+        }
+      }
+      http.end();
+    } else {
+      Serial.println(F("[HTTP] HTTP connection init failed!"));
+    }
   }
+
+  return success;
 }
 
 bool httpSendTelemetry(float lat, float lon, uint8_t battPct) {
@@ -82,31 +105,57 @@ bool httpSendTelemetry(float lat, float lon, uint8_t battPct) {
   HTTPClient http;
   http.setTimeout(5000);
 
-  WiFiClient plainClient;
-  bool begun = url.startsWith("https://") ? http.begin(_secureClient, url) : http.begin(plainClient, url);
+  bool success = false;
 
-  if (!begun) {
-    Serial.println(F("[HTTP] Telemetry connection failed!"));
-    return false;
-  }
+  if (url.startsWith("https://")) {
+    WiFiClientSecure secureClient;
+    secureClient.setInsecure(); // Skip cert verification for dev/cloud endpoints
 
-  http.addHeader("X-Lat", String(lat, 6));
-  http.addHeader("X-Lon", String(lon, 6));
-  http.addHeader("X-Batt", String(battPct));
-  http.addHeader("X-Type", "telemetry");
+    if (http.begin(secureClient, url)) {
+      http.addHeader("X-Lat", String(lat, 6));
+      http.addHeader("X-Lon", String(lon, 6));
+      http.addHeader("X-Batt", String(battPct));
+      http.addHeader("X-Type", "telemetry");
 
-  int httpCode = http.POST("");
+      int httpCode = http.POST("");
 
-  if (httpCode == 200 || httpCode == 201) {
-    Serial.printf("[HTTP] 📡 Live location uploaded: lat=%.6f, lon=%.6f (batt=%d%%)\n", lat, lon, battPct);
-    http.end();
-    return true;
-  } else {
-    Serial.printf("[HTTP] ⚠ Telemetry POST failed, code: %d\n", httpCode);
-    if (httpCode > 0) {
-      Serial.printf("[HTTP] Response: %s\n", http.getString().c_str());
+      if (httpCode == 200 || httpCode == 201) {
+        Serial.printf("[HTTP] 📡 Live location uploaded: lat=%.6f, lon=%.6f (batt=%d%%)\n", lat, lon, battPct);
+        success = true;
+      } else {
+        Serial.printf("[HTTP] ⚠ Telemetry POST failed, code: %d\n", httpCode);
+        if (httpCode > 0) {
+          Serial.printf("[HTTP] Response: %s\n", http.getString().c_str());
+        }
+      }
+      http.end();
+    } else {
+      Serial.println(F("[HTTP] HTTPS telemetry connection init failed!"));
     }
-    http.end();
-    return false;
+  } else {
+    WiFiClient plainClient;
+    if (http.begin(plainClient, url)) {
+      http.addHeader("X-Lat", String(lat, 6));
+      http.addHeader("X-Lon", String(lon, 6));
+      http.addHeader("X-Batt", String(battPct));
+      http.addHeader("X-Type", "telemetry");
+
+      int httpCode = http.POST("");
+
+      if (httpCode == 200 || httpCode == 201) {
+        Serial.printf("[HTTP] 📡 Live location uploaded: lat=%.6f, lon=%.6f (batt=%d%%)\n", lat, lon, battPct);
+        success = true;
+      } else {
+        Serial.printf("[HTTP] ⚠ Telemetry POST failed, code: %d\n", httpCode);
+        if (httpCode > 0) {
+          Serial.printf("[HTTP] Response: %s\n", http.getString().c_str());
+        }
+      }
+      http.end();
+    } else {
+      Serial.println(F("[HTTP] HTTP telemetry connection init failed!"));
+    }
   }
+
+  return success;
 }

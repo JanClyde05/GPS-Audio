@@ -68,18 +68,18 @@ export async function updateEventIndex(eventId: string) {
 
 export const DEFAULT_SEED_EVENTS = [
   {
-    id: "evt-live-101",
-    lat: 17.649834,
-    lon: 121.744034,
+    id: "evt_telemetry_latest",
+    lat: 0,
+    lon: 0,
     type: "telemetry",
     isTelemetry: true,
     batt: 0,
-    signal: 94,
+    signal: 0,
     speed: 0.0,
-    accuracy: 3.5,
+    accuracy: 0,
     createdAt: new Date().toISOString(),
     status: "normal",
-    title: "Wearable Initialized (USB Power)"
+    title: "Awaiting Wearable GPS Fix"
   },
   {
     id: "evt-audio-201",
@@ -160,6 +160,15 @@ export async function clearAllStores() {
 
   try {
     const eventStore = getStore("events");
+    // Read current index to delete all individual event entries
+    const existingIndex = await eventStore.get("_index", { type: "json" }) as string[] | null;
+    if (existingIndex && Array.isArray(existingIndex)) {
+      for (const id of existingIndex) {
+        try { await eventStore.delete(id); } catch {}
+      }
+    }
+    // Also delete known legacy seed IDs that may be orphaned
+    try { await eventStore.delete("evt-live-101"); } catch {}
     await eventStore.setJSON("_index", []);
   } catch {}
 }

@@ -53,10 +53,12 @@ function updateMap(eventList) {
 
   const bounds = [];
 
-  eventList.forEach((evt, idx) => {
+  eventList.forEach((evt) => {
+    // Skip events with no valid GPS coordinates
     if (!evt.lat || !evt.lon || (evt.lat === 0 && evt.lon === 0)) return;
 
-    const isLive = evt.isTelemetry || idx === 0;
+    // Use the isTelemetry flag to identify the live wearable location pin
+    const isLive = evt.isTelemetry === true;
     const marker = L.circleMarker([evt.lat, evt.lon], {
       radius: isLive ? 12 : 7,
       fillColor: isLive ? '#3b82f6' : '#ef4444',
