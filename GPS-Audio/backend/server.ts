@@ -97,6 +97,14 @@ async function startServer() {
       return res.send(bufferToSend);
     }
 
+    // Purge any legacy hardcoded seed events
+    eventsStore = eventsStore.filter(e => {
+      if (e.id === "evt-live-101" || e.id === "evt-audio-201" || e.id === "evt-audio-202" || e.id === "evt-telemetry-102") return false;
+      if (e.title && (e.title.includes("USB Power") || e.title.includes("Audio Spike Trigger"))) return false;
+      if (e.lat >= 17.64 && e.lat <= 17.66 && e.lon >= 121.74 && e.lon <= 121.75) return false;
+      return true;
+    });
+
     res.json({
       status: "ok",
       count: eventsStore.length,

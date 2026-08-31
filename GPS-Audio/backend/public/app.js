@@ -82,10 +82,11 @@ function updateMap(eventList) {
   });
 
   if (bounds.length > 0) {
-    if (bounds.length === 1) {
-      map.setView(bounds[0], 16);
+    const liveEvt = eventList.find(e => e.isTelemetry && e.lat !== 0 && e.lon !== 0);
+    if (liveEvt) {
+      map.setView([liveEvt.lat, liveEvt.lon], 16);
     } else {
-      map.fitBounds(bounds, { padding: [30, 30] });
+      map.setView(bounds[0], 16);
     }
   }
 }

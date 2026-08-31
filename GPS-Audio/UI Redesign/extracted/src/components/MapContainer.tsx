@@ -23,8 +23,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const [copiedCoords, setCopiedCoords] = useState(false);
   const [mapStyle, setMapStyle] = useState<'monochrome' | 'standard'>('monochrome');
 
-  const telemetryEvt = events.find((e) => e.isTelemetry && e.lat !== 0 && e.lon !== 0) || null;
-  const activeEvt = telemetryEvt;
+  const activeFixEvt = events.find((e) => e.lat && e.lon && !(e.lat === 0 && e.lon === 0)) || null;
+  const activeEvt = activeFixEvt;
 
   // Initialize Leaflet Map once
   useEffect(() => {
@@ -159,10 +159,10 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     });
 
     if (bounds.length > 0) {
-      if (bounds.length === 1) {
-        map.setView(bounds[0], 16, { animate: true });
+      if (activeEvt && activeEvt.lat !== 0 && activeEvt.lon !== 0) {
+        map.setView([activeEvt.lat, activeEvt.lon], 16, { animate: true });
       } else {
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+        map.setView(bounds[0], 16, { animate: true });
       }
     }
   }, [events, selectedEventId, theme]);

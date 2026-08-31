@@ -11,15 +11,12 @@ interface TelemetryBarProps {
 export const TelemetryBar: React.FC<TelemetryBarProps> = ({ latestEvent, events }) => {
   const audioAlerts = events.filter((e) => !e.isTelemetry);
   
-  // Only use telemetry events for the live position display — never fall back to audio events
+  // Find the latest event (telemetry or audio alert) with valid GPS coordinates
+  const validGpsEvt = events.find((e) => e.lat && e.lon && !(e.lat === 0 && e.lon === 0)) || null;
   const telemetryEvt = events.find((e) => e.isTelemetry) || null;
   
-  // Only treat telemetry as valid if it has non-zero GPS coordinates
-  const hasValidGps = telemetryEvt !== null && 
-    telemetryEvt.lat !== undefined && telemetryEvt.lon !== undefined &&
-    !(telemetryEvt.lat === 0 && telemetryEvt.lon === 0);
-  
-  const isLiveTelemetry = hasValidGps;
+  const hasValidGps = validGpsEvt !== null;
+  const isLiveTelemetry = validGpsEvt?.isTelemetry === true;
   const hasTelemetry = telemetryEvt !== null && telemetryEvt !== undefined;
   const rawBatt = telemetryEvt?.batt !== undefined && telemetryEvt?.batt !== null ? Number(telemetryEvt.batt) : null;
 
@@ -62,11 +59,11 @@ export const TelemetryBar: React.FC<TelemetryBarProps> = ({ latestEvent, events 
           <Compass className="w-4 h-4 text-neutral-400 dark:text-neutral-500" />
         </div>
         <div className="font-mono text-sm sm:text-base font-black tracking-tight text-neutral-950 dark:text-white truncate">
-          {hasValidGps ? formatCoords(telemetryEvt!.lat, telemetryEvt!.lon) : 'No GPS Signal'}
+          {hasValidGps ? formatCoords(validGpsEvt!.lat, validGpsEvt!.lon) : 'No GPS Signal'}
         </div>
         <div className="flex items-center gap-1.5 mt-1.5 text-[11px] font-mono font-semibold text-neutral-500 dark:text-neutral-400">
           <span className={`w-2 h-2 rounded-full inline-block shrink-0 ${isLiveTelemetry ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-          <span className="truncate">{isLiveTelemetry ? 'SYNC:' : 'AWAITING GPS:'} {hasValidGps ? formatTime(telemetryEvt?.createdAt) : 'NO FIX'}</span>
+          <span className="truncate">{hasValidGps ? (isLiveTelemetry ? 'SYNC:' : 'LAST FIX:') : 'AWAITING GPS:'} {hasValidGps ? formatTime(validGpsEvt?.createdAt) : 'NO FIX'}</span>
         </div>
       </div>
 

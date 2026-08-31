@@ -84,17 +84,18 @@ export default async (request: Request, context: Context) => {
     // ── List all events ───────────────────────────────────────────────────
     let index = await getEventIndex();
 
-    // Auto-seed initial default events if store is empty
-    if (index.length === 0) {
-      await seedEvents();
-      index = await getEventIndex();
-    }
-
     const events = [];
     for (const id of index) {
       const evt = await getEvent(id);
       if (evt) {
-        events.push(evt);
+        // Filter out any legacy Montilia St demo/seed events
+        const isLegacySeed = id === "evt-live-101" || id === "evt-audio-201" || id === "evt-audio-202" || id === "evt-telemetry-102" ||
+          (evt.title && (evt.title.includes("USB Power") || evt.title.includes("Audio Spike Trigger"))) ||
+          (evt.lat >= 17.64 && evt.lat <= 17.66 && evt.lon >= 121.74 && evt.lon <= 121.75);
+
+        if (!isLegacySeed) {
+          events.push(evt);
+        }
       }
     }
 
