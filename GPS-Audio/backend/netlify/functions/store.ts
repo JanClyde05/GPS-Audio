@@ -62,6 +62,15 @@ export async function getEventIndex(): Promise<string[]> {
     const store = getStore("events");
     const existing = await store.get("_index", { type: "json" }) as string[] | null;
     if (existing && Array.isArray(existing)) blobsIndex = existing;
+
+    // Auto-discover any unindexed event blobs directly from Netlify Blobs list
+    const { blobs } = await store.list();
+    if (blobs && Array.isArray(blobs)) {
+      const discoveredKeys = blobs
+        .map((b) => b.key)
+        .filter((k) => k !== "_index" && (k.startsWith("evt_") || k.startsWith("evt-")));
+      blobsIndex = Array.from(new Set([...blobsIndex, ...discoveredKeys]));
+    }
   } catch {}
 
   const merged = Array.from(new Set([...memoryIndex, ...blobsIndex, ...Array.from(memoryEvents.keys())]));

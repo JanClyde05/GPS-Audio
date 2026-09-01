@@ -98,6 +98,13 @@ export default async (request: Request, context: Context) => {
       }
     }
 
+    // Sort events newest first by timestamp / createdAt
+    events.sort((a: any, b: any) => {
+      const timeA = new Date(a.createdAt || a.timestamp || 0).getTime();
+      const timeB = new Date(b.createdAt || b.timestamp || 0).getTime();
+      return timeB - timeA;
+    });
+
     return new Response(JSON.stringify({ events, total: events.length }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
