@@ -82,9 +82,10 @@ async function startServer() {
 
   const upload = multer({ storage: multer.memoryStorage() });
 
-  // 1. GET /api/events (Return events list or stream audio if audio query is present)
+  // 1. GET /api/events (Return events list, single event detail, or stream audio if audio query is present)
   app.get("/api/events", (req, res) => {
     const audioKey = req.query.audio as string;
+    const eventId = req.query.id as string;
 
     if (audioKey) {
       let storedBuffer = audioStore.get(audioKey);
@@ -101,6 +102,12 @@ async function startServer() {
       res.setHeader("Content-Length", bufferToSend.length);
       res.setHeader("Accept-Ranges", "bytes");
       return res.send(bufferToSend);
+    }
+
+    if (eventId) {
+      const target = eventsStore.find(e => e.id === eventId || e.id.replace(/\.wav$/, '') === eventId.replace(/\.wav$/, ''));
+      if (target) return res.json(target);
+      return res.status(404).json({ error: "Event not found" });
     }
 
     // Purge legacy demo seed events if present
@@ -203,7 +210,7 @@ async function startServer() {
       // When an audio alert has valid GPS, also update the live telemetry pin
       // so the map always shows the last known location
       if (!isTelemetry && lat !== 0 && lon !== 0) {
-        eventsStore = eventsStore.filter(e => !e.isTelemetry);
+        eventsStore = eventsStore.filter(e => e.id !== "evt-telemetry-latest");
         const telemetryUpdate: StoredEvent = {
           id: "evt-telemetry-latest",
           lat,

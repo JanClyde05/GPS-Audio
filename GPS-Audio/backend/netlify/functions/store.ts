@@ -60,10 +60,11 @@ export async function getEventIndex(): Promise<string[]> {
   try {
     const store = getStore("events");
     const existing = await store.get("_index", { type: "json" }) as string[] | null;
-    if (existing && Array.isArray(existing)) return existing;
+    if (existing && Array.isArray(existing) && existing.length > 0) return existing;
   } catch {}
 
-  return memoryIndex;
+  if (memoryIndex.length > 0) return memoryIndex;
+  return Array.from(memoryEvents.keys());
 }
 
 export async function updateEventIndex(eventId: string) {

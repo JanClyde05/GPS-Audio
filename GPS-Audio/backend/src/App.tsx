@@ -70,7 +70,23 @@ export default function App() {
       const hash = window.location.hash;
       if (hash.startsWith('#event-')) {
         const eventId = hash.replace('#event-', '');
-        const targetEvt = eventList.find((e) => e.id === eventId || e.id.replace(/\.wav$/, '') === eventId.replace(/\.wav$/, ''));
+        let targetEvt = eventList.find((e) => e.id === eventId || e.id.replace(/\.wav$/, '') === eventId.replace(/\.wav$/, ''));
+
+        if (!targetEvt && eventId) {
+          try {
+            const singleRes = await fetch(`/api/events?id=${encodeURIComponent(eventId)}`);
+            if (singleRes.ok) {
+              const singleEvt = await singleRes.json();
+              if (singleEvt && singleEvt.id) {
+                targetEvt = singleEvt;
+                setEvents((prev) => [singleEvt, ...prev.filter((e) => e.id !== singleEvt.id)]);
+              }
+            }
+          } catch (e) {
+            console.warn('Could not fetch deep-linked event by ID:', e);
+          }
+        }
+
         if (targetEvt && (!selectedEvent || selectedEvent.id !== targetEvt.id)) {
           setSelectedEvent(targetEvt);
         }
