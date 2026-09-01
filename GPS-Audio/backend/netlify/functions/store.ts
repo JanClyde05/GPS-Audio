@@ -6,12 +6,12 @@ const memoryAudio = new Map<string, Uint8Array>();
 let memoryIndex: string[] = [];
 
 export async function saveEvent(eventId: string, eventData: any) {
+  memoryEvents.set(eventId, eventData);
   try {
     const store = getStore("events");
     await store.setJSON(eventId, eventData);
   } catch (err) {
-    console.warn(`[STORE] Netlify Blobs unavailable locally — using in-memory store for event ${eventId}`);
-    memoryEvents.set(eventId, eventData);
+    console.warn(`[STORE] Netlify Blobs unavailable locally for event ${eventId}`);
   }
 }
 
@@ -26,12 +26,12 @@ export async function getEvent(eventId: string): Promise<any> {
 }
 
 export async function saveAudio(audioKey: string, audioData: Uint8Array, metadata: any) {
+  memoryAudio.set(audioKey, audioData);
   try {
     const store = getStore("audio-clips");
     await store.set(audioKey, audioData, { metadata });
   } catch (err) {
-    console.warn(`[STORE] Netlify Blobs unavailable locally — using in-memory store for audio ${audioKey}`);
-    memoryAudio.set(audioKey, audioData);
+    console.warn(`[STORE] Netlify Blobs unavailable locally for audio ${audioKey}`);
   }
 }
 
@@ -57,21 +57,22 @@ export async function getAudio(audioKey: string): Promise<Uint8Array | null> {
 }
 
 export async function getEventIndex(): Promise<string[]> {
+  let blobsIndex: string[] = [];
   try {
     const store = getStore("events");
     const existing = await store.get("_index", { type: "json" }) as string[] | null;
-    if (existing && Array.isArray(existing) && existing.length > 0) return existing;
+    if (existing && Array.isArray(existing)) blobsIndex = existing;
   } catch {}
 
-  if (memoryIndex.length > 0) return memoryIndex;
-  return Array.from(memoryEvents.keys());
+  const merged = Array.from(new Set([...memoryIndex, ...blobsIndex, ...Array.from(memoryEvents.keys())]));
+  return merged.slice(0, 100);
 }
 
 export async function updateEventIndex(eventIds: string | string[]) {
   const idsToAdd = Array.isArray(eventIds) ? eventIds : [eventIds];
   let index = await getEventIndex();
 
-  for (const id of idsToAdd.reverse()) {
+  for (const id of idsToAdd) {
     index = [id, ...index.filter((existingId) => existingId !== id)];
   }
   index = index.slice(0, 100);
