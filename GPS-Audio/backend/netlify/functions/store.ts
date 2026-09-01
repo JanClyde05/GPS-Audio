@@ -67,9 +67,14 @@ export async function getEventIndex(): Promise<string[]> {
   return Array.from(memoryEvents.keys());
 }
 
-export async function updateEventIndex(eventId: string) {
+export async function updateEventIndex(eventIds: string | string[]) {
+  const idsToAdd = Array.isArray(eventIds) ? eventIds : [eventIds];
   let index = await getEventIndex();
-  index = [eventId, ...index.filter((id) => id !== eventId)].slice(0, 100);
+
+  for (const id of idsToAdd.reverse()) {
+    index = [id, ...index.filter((existingId) => existingId !== id)];
+  }
+  index = index.slice(0, 100);
   memoryIndex = index;
 
   try {

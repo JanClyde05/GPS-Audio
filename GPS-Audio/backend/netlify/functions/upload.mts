@@ -124,7 +124,6 @@ export default async (request: Request, context: Context) => {
     };
 
     await saveEvent(eventId, eventData);
-    await updateEventIndex(eventId);
 
     // Also update the live telemetry pin to the audio alert's GPS coordinates
     // so the "last fix" position always reflects the most recent known location
@@ -147,7 +146,9 @@ export default async (request: Request, context: Context) => {
         title: "Last Known Location (from Audio Alert)",
       };
       await saveEvent("evt_telemetry_latest", telemetryUpdate);
-      await updateEventIndex("evt_telemetry_latest");
+      await updateEventIndex([eventId, "evt_telemetry_latest"]);
+    } else {
+      await updateEventIndex(eventId);
     }
 
     console.log(`[UPLOAD] ✅ Audio Event ${eventId}: ${audioData.byteLength} bytes, GPS: ${lat}, ${lon}`);

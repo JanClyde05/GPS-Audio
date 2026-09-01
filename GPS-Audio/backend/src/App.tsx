@@ -62,7 +62,13 @@ export default function App() {
       const data = await res.json();
       const eventList: GuardianEvent[] = data.events || [];
 
-      setEvents(eventList);
+      setEvents((prev) => {
+        let merged = [...eventList];
+        if (selectedEvent && !merged.some((e) => e.id === selectedEvent.id)) {
+          merged = [selectedEvent, ...merged];
+        }
+        return merged;
+      });
       setIsOnline(true);
       setLastUpdated(new Date());
 
