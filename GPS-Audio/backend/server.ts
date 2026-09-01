@@ -79,7 +79,6 @@ async function startServer() {
   app.use(cors());
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-  app.use(express.raw({ type: "*/*", limit: "50mb" }));
 
   const upload = multer({ storage: multer.memoryStorage() });
 
@@ -88,7 +87,14 @@ async function startServer() {
     const audioKey = req.query.audio as string;
 
     if (audioKey) {
-      const storedBuffer = audioStore.get(audioKey);
+      let storedBuffer = audioStore.get(audioKey);
+      if (!storedBuffer && !audioKey.endsWith(".wav")) {
+        storedBuffer = audioStore.get(`${audioKey}.wav`);
+      }
+      if (!storedBuffer && audioKey.endsWith(".wav")) {
+        storedBuffer = audioStore.get(audioKey.replace(/\.wav$/, ""));
+      }
+
       const bufferToSend = storedBuffer || sampleWavCache;
 
       res.setHeader("Content-Type", "audio/wav");
@@ -97,11 +103,10 @@ async function startServer() {
       return res.send(bufferToSend);
     }
 
-    // Purge any legacy hardcoded seed events
+    // Purge legacy demo seed events if present
     eventsStore = eventsStore.filter(e => {
       if (e.id === "evt-live-101" || e.id === "evt-audio-201" || e.id === "evt-audio-202" || e.id === "evt-telemetry-102") return false;
       if (e.title && (e.title.includes("USB Power") || e.title.includes("Audio Spike Trigger"))) return false;
-      if (e.lat >= 17.64 && e.lat <= 17.66 && e.lon >= 121.74 && e.lon <= 121.75) return false;
       return true;
     });
 
@@ -131,8 +136,18 @@ async function startServer() {
     res.json({ status: "ok", message: "Receiver and server memory cleared" });
   });
 
+  // Conditional middleware for /api/upload: handles both multipart/form-data & raw binary audio
+  const uploadMiddleware = (req: any, res: any, next: any) => {
+    const contentType = (req.headers["content-type"] || "").toLowerCase();
+    if (contentType.includes("multipart/form-data")) {
+      upload.single("audio")(req, res, next);
+    } else {
+      express.raw({ type: "*/*", limit: "50mb" })(req, res, next);
+    }
+  };
+
   // 4. POST /api/upload (Telemetry & Audio upload endpoint for ESP32 and UI testing)
-  app.post("/api/upload", upload.single("audio"), (req: any, res) => {
+  app.post("/api/upload", uploadMiddleware, (req: any, res) => {
     try {
       // Extract coordinates from query params, body, or headers
       const latStr = (req.query.lat as string) || req.body.lat || req.headers["x-lat"] || "0";

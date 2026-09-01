@@ -103,7 +103,8 @@ export const AudioPlayerModal: React.FC<AudioPlayerModalProps> = ({
     setCurrentTime(0);
 
     if (audioRef.current) {
-      const audioUrl = event.audioUrl || `/api/events?audio=${encodeURIComponent(event.audioKey || event.id)}`;
+      const key = event.audioKey || (event.id.endsWith('.wav') ? event.id : `${event.id}.wav`);
+      const audioUrl = event.audioUrl || `/api/events?audio=${encodeURIComponent(key)}`;
       audioRef.current.src = audioUrl;
       audioRef.current.load();
     }

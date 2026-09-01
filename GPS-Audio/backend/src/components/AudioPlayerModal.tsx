@@ -41,6 +41,7 @@ export const AudioPlayerModal: React.FC<AudioPlayerModalProps> = ({
   const [playbackRate, setPlaybackRate] = useState(1.0);
   const [volume, setVolume] = useState(1.0);
   const [isMuted, setIsMuted] = useState(false);
+  const [hasAudioError, setHasAudioError] = useState(false);
 
   // Initialize and update Mini Map
   useEffect(() => {
@@ -101,9 +102,11 @@ export const AudioPlayerModal: React.FC<AudioPlayerModalProps> = ({
     if (!event) return;
     setIsPlaying(false);
     setCurrentTime(0);
+    setHasAudioError(false);
 
     if (audioRef.current) {
-      const audioUrl = event.audioUrl || `/api/events?audio=${encodeURIComponent(event.audioKey || event.id)}`;
+      const key = event.audioKey || (event.id.endsWith('.wav') ? event.id : `${event.id}.wav`);
+      const audioUrl = event.audioUrl || `/api/events?audio=${encodeURIComponent(key)}`;
       audioRef.current.src = audioUrl;
       audioRef.current.load();
     }
@@ -218,6 +221,11 @@ export const AudioPlayerModal: React.FC<AudioPlayerModalProps> = ({
           onEnded={() => {
             setIsPlaying(false);
             setCurrentTime(0);
+          }}
+          onError={() => {
+            console.warn('Audio payload failed to load or decode');
+            setHasAudioError(true);
+            setIsPlaying(false);
           }}
         />
 

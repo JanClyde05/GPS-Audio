@@ -88,10 +88,9 @@ export default async (request: Request, context: Context) => {
     for (const id of index) {
       const evt = await getEvent(id);
       if (evt) {
-        // Filter out any legacy Montilia St demo/seed events
+        // Filter out legacy demo seed events if present
         const isLegacySeed = id === "evt-live-101" || id === "evt-audio-201" || id === "evt-audio-202" || id === "evt-telemetry-102" ||
-          (evt.title && (evt.title.includes("USB Power") || evt.title.includes("Audio Spike Trigger"))) ||
-          (evt.lat >= 17.64 && evt.lat <= 17.66 && evt.lon >= 121.74 && evt.lon <= 121.75);
+          (evt.title && (evt.title.includes("USB Power") || evt.title.includes("Audio Spike Trigger")));
 
         if (!isLegacySeed) {
           events.push(evt);

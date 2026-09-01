@@ -70,8 +70,8 @@ export default function App() {
       const hash = window.location.hash;
       if (hash.startsWith('#event-')) {
         const eventId = hash.replace('#event-', '');
-        const targetEvt = eventList.find((e) => e.id === eventId);
-        if (targetEvt && (!selectedEvent || selectedEvent.id !== eventId)) {
+        const targetEvt = eventList.find((e) => e.id === eventId || e.id.replace(/\.wav$/, '') === eventId.replace(/\.wav$/, ''));
+        if (targetEvt && (!selectedEvent || selectedEvent.id !== targetEvt.id)) {
           setSelectedEvent(targetEvt);
         }
       }

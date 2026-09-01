@@ -49,15 +49,17 @@ export default async (request: Request, context: Context) => {
         if (formData.has("type")) type = (formData.get("type") as string) || type;
         if (formData.has("batt")) batt = (formData.get("batt") as string) || batt;
       } catch (formErr) {
-        console.warn("[UPLOAD] formData() parse issue — attempting direct body extraction:", formErr);
+        console.warn("[UPLOAD] formData() parse issue:", formErr);
       }
-    }
-
-    // Direct stream fallback if formData didn't extract audio
-    if (!audioBuffer) {
-      const rawBytes = await request.arrayBuffer();
-      if (rawBytes && rawBytes.byteLength > 0) {
-        audioBuffer = rawBytes;
+    } else {
+      // Direct stream extraction for raw binary uploads (e.g. audio/wav)
+      try {
+        const rawBytes = await request.arrayBuffer();
+        if (rawBytes && rawBytes.byteLength > 0) {
+          audioBuffer = rawBytes;
+        }
+      } catch (rawErr) {
+        console.warn("[UPLOAD] Direct stream parse issue:", rawErr);
       }
     }
 

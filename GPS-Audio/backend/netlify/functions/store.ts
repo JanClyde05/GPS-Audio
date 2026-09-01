@@ -36,13 +36,24 @@ export async function saveAudio(audioKey: string, audioData: Uint8Array, metadat
 }
 
 export async function getAudio(audioKey: string): Promise<Uint8Array | null> {
+  const keysToTry = [audioKey];
+  if (!audioKey.endsWith(".wav")) keysToTry.push(`${audioKey}.wav`);
+  if (audioKey.endsWith(".wav")) keysToTry.push(audioKey.replace(/\.wav$/, ""));
+
   try {
     const store = getStore("audio-clips");
-    const data = await store.get(audioKey, { type: "arrayBuffer" });
-    if (data) return new Uint8Array(data);
+    for (const key of keysToTry) {
+      const data = await store.get(key, { type: "arrayBuffer" });
+      if (data) return new Uint8Array(data);
+    }
   } catch {}
 
-  return memoryAudio.get(audioKey) || null;
+  for (const key of keysToTry) {
+    const memData = memoryAudio.get(key);
+    if (memData) return memData;
+  }
+
+  return null;
 }
 
 export async function getEventIndex(): Promise<string[]> {
